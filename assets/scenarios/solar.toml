@@ -3,8 +3,10 @@ description = "Approximate Newtonian Solar System using real masses, distances, 
 
 [simulation]
 units = "si"
-time_step = 3600.0
-substeps = 4
+# 300 s keeps even the tightest moons (Phobos, ~7.6 h period) well-resolved and
+# stable. `substeps` here is the default steps-per-frame; the app tunes it live.
+time_step = 300.0
+substeps = 240
 integrator = "leapfrog"
 gravitational_constant = 6.67430e-11
 softening = 1.0e3

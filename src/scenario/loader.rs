@@ -36,12 +36,24 @@ fn parse_kind(s: &str) -> Kind {
 fn build(scn: Scenario) -> Result<Loaded> {
     // First pass: build every body with its own (heliocentric or explicit) state.
     let mut bodies: Vec<Body> = Vec::with_capacity(scn.bodies.len());
+    let mut helio_index: u32 = 0;
     for spec in &scn.bodies {
         let mut b = Body::new(spec.name.clone(), parse_kind(&spec.kind), spec.mass, spec.radius);
         if let Some(g) = spec.glyph {
             b.glyph = g;
         }
-        let (pos, vel) = self_state(spec)?;
+        let (mut pos, mut vel) = self_state(spec)?;
+        // Spread heliocentric bodies across distinct orbital phases so the
+        // default scene reads as a system, not a collinear line. Explicit-vector
+        // and parented bodies keep their given phase.
+        let phased = spec.position.is_none()
+            && spec.parent.is_none()
+            && spec.distance.map(|d| d > 0.0).unwrap_or(false);
+        if phased {
+            let theta = helio_index as f64 * 2.399_963_23; // golden angle (rad)
+            (pos, vel) = rotate_z(pos, vel, theta);
+            helio_index += 1;
+        }
         b.pos = pos;
         b.vel = vel;
         bodies.push(b);
@@ -96,4 +108,11 @@ fn self_state(spec: &BodySpec) -> Result<([f64; 3], [f64; 3])> {
     let d = spec.distance.unwrap_or(0.0);
     let v = spec.orbital_velocity.unwrap_or(0.0);
     Ok(([d, 0.0, 0.0], [0.0, v, 0.0]))
+}
+
+/// Rotate a position/velocity pair by `theta` about the z-axis (orbital plane).
+fn rotate_z(pos: [f64; 3], vel: [f64; 3], theta: f64) -> ([f64; 3], [f64; 3]) {
+    let (s, c) = theta.sin_cos();
+    let rot = |v: [f64; 3]| [v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]];
+    (rot(pos), rot(vel))
 }

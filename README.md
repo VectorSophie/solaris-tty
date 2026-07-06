@@ -8,24 +8,37 @@ on screen for every big action.
 
 Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate-tty).
 
-## Status: v0.1 in progress
+## Status: v0.1 playable
 
 - [x] Physics core — direct N-body gravity, velocity-Verlet (leapfrog), SI f64
 - [x] Diagnostics — energy/momentum conservation, orbital elements, classification
 - [x] Barycentric correction
-- [ ] Scenario loader + realistic `solar.toml`
-- [ ] Hybrid renderer (rasterized spheres + braille trails)
-- [ ] Free-fly camera + Physics Trace panel
-- [ ] Interactive app loop, `:spawn`, `--bench`
+- [x] Scenario loader + realistic `solar.toml` (17 bodies, phased orbits)
+- [x] Hybrid renderer — shaded billboard discs + braille orbital trails, depth-tested
+- [x] Free-fly camera + Physics Trace panel (compact / expanded / debug)
+- [x] Interactive app loop, `--bench`
+- [ ] `:spawn` command + live editing (v0.2)
+- [ ] Collisions, escape/decay detection, scale modes, rewind (roadmap)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.
 
-## Build
+## Run
 
 ```
-cargo run      # headless physics demo (Sun + Earth, one year)
-cargo test     # physics-core checks
+solaris-tty                # or: cargo run --release
+```
+
+Controls: **WASD/R/F** fly · **arrows** look · **Tab** select body · **[ ]** speed ·
+**Space** pause · **.** step · **m** cycle trace mode (compact/expanded/debug) · **q** quit.
+
+Other modes:
+
+```
+cargo run -- --check       # headless load + orbit classification + energy check
+cargo run -- --frame       # render one frame to a plain-text grid
+cargo run --release -- --bench   # N-body throughput benchmark
+cargo test                 # physics + scenario checks
 ```
 
 ## License
