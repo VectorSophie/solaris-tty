@@ -1,6 +1,7 @@
 //! solaris-tty — a real-time 3D astrophysics simulator in your terminal.
 
 pub mod app;
+pub mod command;
 pub mod render;
 pub mod scenario;
 pub mod sim;

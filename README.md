@@ -17,8 +17,8 @@ Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate
 - [x] Hybrid renderer — shaded billboard discs + braille orbital trails, depth-tested
 - [x] Free-fly camera + Physics Trace panel (compact / expanded / debug)
 - [x] Interactive app loop, `--bench`
-- [ ] `:spawn` command + live editing (v0.2)
-- [ ] Collisions, escape/decay detection, scale modes, rewind (roadmap)
+- [x] `:spawn` / `:inspect` command line with live spawn trace
+- [ ] Live editing (`:set mass/vel/...`), collisions, escape/decay detection, scale modes, rewind (roadmap)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.
@@ -30,7 +30,15 @@ solaris-tty                # or: cargo run --release
 ```
 
 Controls: **WASD/R/F** fly · **arrows** look · **Tab** select body · **[ ]** speed ·
-**Space** pause · **.** step · **m** cycle trace mode (compact/expanded/debug) · **q** quit.
+**Space** pause · **.** step · **m** cycle trace mode (compact/expanded/debug) ·
+**:** command line · **q** quit.
+
+Spawn a body and watch the math:
+
+```
+:spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0
+:inspect Mars
+```
 
 Other modes:
 

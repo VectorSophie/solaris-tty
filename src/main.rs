@@ -73,6 +73,20 @@ fn frame() -> Result<()> {
     scene::render(&mut fb, &cam, &world, world.find_body("Earth").unwrap_or(1));
     fb.composite_braille();
     print!("{}", fb.to_text());
+
+    // Demo the spawn trace (the signature feature) headlessly.
+    println!("\n$ :spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0\n");
+    match solaris_tty::command::execute(
+        &mut world,
+        "spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0",
+    ) {
+        Ok(out) => {
+            for l in out.panel.unwrap_or_default() {
+                println!("  {l}");
+            }
+        }
+        Err(e) => println!("  error: {e}"),
+    }
     Ok(())
 }
 

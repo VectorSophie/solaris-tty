@@ -7,6 +7,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::style::Color;
 use glam::Vec3;
 
+use crate::command;
 use crate::render::scene::body_color;
 use crate::render::{camera::Camera, cell::Cell, terminal, FrameBuffer};
 use crate::scenario::Loaded;
@@ -40,8 +41,13 @@ fn run_loop(loaded: Loaded) -> Result<()> {
     let mut steps_per_frame: u32 = world.substeps.max(1);
     let mut paused = false;
     let mut trace_mode = TraceMode::Compact;
-    // Show the load trace until the user first inspects something.
-    let mut load_banner = Some(trace::load_lines(loaded.v_com, world.bodies.len()));
+    // Panel override: the load trace, then any command result, shown until the
+    // user next changes selection or trace mode.
+    let mut panel_override = Some(trace::load_lines(loaded.v_com, world.bodies.len()));
+    // When Some, we're typing a `:` command; holds the buffer.
+    let mut command_buf: Option<String> = None;
+    // One-line feedback (errors / confirmations) shown on the status bar.
+    let mut status_msg: Option<String> = None;
 
     let frame = Duration::from_millis(33);
     loop {
@@ -56,8 +62,41 @@ fn run_loop(loaded: Loaded) -> Result<()> {
                     {
                         return Ok(());
                     }
+                    // --- command-line mode: capture typing ---
+                    if let Some(buf) = command_buf.as_mut() {
+                        match k.code {
+                            KeyCode::Esc => command_buf = None,
+                            KeyCode::Backspace => {
+                                buf.pop();
+                            }
+                            KeyCode::Enter => {
+                                let line = std::mem::take(buf);
+                                command_buf = None;
+                                match command::execute(&mut world, &line) {
+                                    Ok(out) => {
+                                        if let Some(p) = out.panel {
+                                            panel_override = Some(p);
+                                        }
+                                        if let Some(s) = out.select {
+                                            selected = s;
+                                        }
+                                        status_msg = None;
+                                    }
+                                    Err(e) => status_msg = Some(format!("error: {e}")),
+                                }
+                            }
+                            KeyCode::Char(c) => buf.push(c),
+                            _ => {}
+                        }
+                        continue;
+                    }
+                    // --- normal mode ---
                     match k.code {
                         KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                        KeyCode::Char(':') => {
+                            command_buf = Some(String::new());
+                            status_msg = None;
+                        }
                         KeyCode::Char('w') => cam.move_forward(1.0),
                         KeyCode::Char('s') => cam.move_forward(-1.0),
                         KeyCode::Char('a') => cam.move_right(-1.0),
@@ -76,11 +115,11 @@ fn run_loop(loaded: Loaded) -> Result<()> {
                         KeyCode::Char('[') => steps_per_frame = (steps_per_frame * 2 / 3).max(1),
                         KeyCode::Tab => {
                             selected = (selected + 1) % world.bodies.len();
-                            load_banner = None;
+                            panel_override = None;
                         }
                         KeyCode::BackTab => {
                             selected = (selected + world.bodies.len() - 1) % world.bodies.len();
-                            load_banner = None;
+                            panel_override = None;
                         }
                         KeyCode::Char('m') => {
                             trace_mode = match trace_mode {
@@ -88,7 +127,7 @@ fn run_loop(loaded: Loaded) -> Result<()> {
                                 TraceMode::Expanded => TraceMode::Debug,
                                 TraceMode::Debug => TraceMode::Compact,
                             };
-                            load_banner = None;
+                            panel_override = None;
                         }
                         _ => {}
                     }
@@ -113,7 +152,17 @@ fn run_loop(loaded: Loaded) -> Result<()> {
         fb.clear();
         render::scene::render(&mut fb, &cam, &world, selected);
         fb.composite_braille();
-        draw_hud(&mut fb, &world, selected, paused, steps_per_frame, trace_mode, &load_banner);
+        draw_hud(
+            &mut fb,
+            &world,
+            selected,
+            paused,
+            steps_per_frame,
+            trace_mode,
+            &panel_override,
+            command_buf.as_deref(),
+            status_msg.as_deref(),
+        );
         terminal::flush(&fb)?;
         fb.swap();
 
@@ -132,12 +181,14 @@ fn draw_hud(
     paused: bool,
     steps: u32,
     mode: TraceMode,
-    load_banner: &Option<Vec<String>>,
+    panel_override: &Option<Vec<String>>,
+    command: Option<&str>,
+    status_msg: Option<&str>,
 ) {
     let (w, h) = fb.size();
 
     // Right-side panel.
-    let lines: Vec<String> = if let Some(b) = load_banner {
+    let lines: Vec<String> = if let Some(b) = panel_override {
         b.clone()
     } else {
         match mode {
@@ -163,19 +214,27 @@ fn draw_hud(
         fb.write_str(px, y, line, col, Color::Reset);
     }
 
-    // Bottom status/help bar.
-    let sim_days = world.time / 86400.0;
-    let status = format!(
-        " solaris-tty │ {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · arrows look · Tab select · [ ] speed · Space pause · m mode · q quit ",
-        if paused { "PAUSED" } else { "RUN" },
-        sim_days,
-        steps,
-        world.energy_drift_pct(),
-    );
-    if h > 0 {
-        for x in 0..w {
-            fb.write_overlay(x, h - 1, Cell { ch: ' ', fg: Color::Black, bg: Color::DarkGrey, depth: f32::MAX });
-        }
-        fb.write_str(0, h - 1, &status, Color::White, Color::DarkGrey);
+    // Bottom bar: command line while typing, else status/help (or a message).
+    if h == 0 {
+        return;
     }
+    for x in 0..w {
+        fb.write_overlay(x, h - 1, Cell { ch: ' ', fg: Color::Black, bg: Color::DarkGrey, depth: f32::MAX });
+    }
+    let bar = if let Some(cmd) = command {
+        format!(":{cmd}\u{2588}")
+    } else if let Some(msg) = status_msg {
+        format!(" {msg}   (press ':' for a command) ")
+    } else {
+        let sim_days = world.time / 86400.0;
+        format!(
+            " solaris-tty │ {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · arrows look · Tab select · [ ] speed · Space pause · : spawn · m mode · q quit ",
+            if paused { "PAUSED" } else { "RUN" },
+            sim_days,
+            steps,
+            world.energy_drift_pct(),
+        )
+    };
+    let fg = if command.is_some() { Color::Yellow } else { Color::White };
+    fb.write_str(0, h - 1, &bar, fg, Color::DarkGrey);
 }

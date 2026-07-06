@@ -64,6 +64,44 @@ pub fn inspect_lines(world: &World, i: usize, expanded: bool) -> Vec<String> {
     out
 }
 
+/// Spawn trace for a freshly created body `i`: given values plus initial
+/// gravitational analysis against its dominant attractor.
+pub fn spawn_lines(world: &World, i: usize) -> Vec<String> {
+    let b = &world.bodies[i];
+    let mut out = vec![
+        format!("✦ Spawned: {}", b.name),
+        "Given:".into(),
+        format!("  m = {} kg", sci(b.mass)),
+        format!("  r = {} m", sci(b.radius)),
+        format!("  ρ = m/(4/3πr³) = {} kg/m³", sci(b.density())),
+        format!("  x = [{}, {}, {}] m", sci(b.pos[0]), sci(b.pos[1]), sci(b.pos[2])),
+        format!("  v = [{}, {}, {}] m/s", sci(b.vel[0]), sci(b.vel[1]), sci(b.vel[2])),
+    ];
+
+    let Some(a) = dominant_attractor(&world.bodies, i, world.g) else {
+        out.push("(no dominant attractor)".into());
+        return out;
+    };
+    let att = &world.bodies[a];
+    let mu = world.g * att.mass;
+    let e = elements(b, att.pos, att.vel, mu);
+    let acc = world.g * att.mass / (e.r * e.r);
+
+    out.push(String::new());
+    out.push(format!("Dominant source: {}", att.name));
+    out.push("  a = G·M / d²".into());
+    out.push(format!("    = {}·{} / ({})²", sci(world.g), sci(att.mass), sci(e.r)));
+    out.push(format!("    = {} m/s²", sci(acc)));
+    out.push("  v_c   = √(GM/d)".into());
+    out.push(format!("        = {} m/s", sci(e.v_circular)));
+    out.push("  v_esc = √(2GM/d)".into());
+    out.push(format!("        = {} m/s", sci(e.v_escape)));
+    out.push(format!("  |v|   = {} m/s", sci(e.speed)));
+    out.push(String::new());
+    out.push(format!("Status: {}", e.status()));
+    out
+}
+
 /// Debug diagnostics for the developer mode.
 pub fn debug_lines(world: &World, steps_per_frame: u32) -> Vec<String> {
     vec![

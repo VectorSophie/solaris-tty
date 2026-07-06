@@ -86,4 +86,13 @@ impl World {
     pub fn find_body(&self, name: &str) -> Option<usize> {
         self.bodies.iter().position(|b| b.name == name)
     }
+
+    /// Add a body at runtime, recomputing cached acceleration (its length must
+    /// track the body count) and re-baselining the reference energy.
+    pub fn add_body(&mut self, body: Body) -> usize {
+        self.bodies.push(body);
+        self.acc = accelerations(&self.bodies, self.g, self.softening);
+        self.energy_ref = self.total_energy();
+        self.bodies.len() - 1
+    }
 }
