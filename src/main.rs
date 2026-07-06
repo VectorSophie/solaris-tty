@@ -69,8 +69,10 @@ fn frame() -> Result<()> {
     }
     let mut fb = FrameBuffer::new(120, 40);
     let cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
+    let stars = solaris_tty::render::starfield::generate(500);
     fb.clear();
-    scene::render(&mut fb, &cam, &world, world.find_body("Earth").unwrap_or(1));
+    scene::render(&mut fb, &cam, &world, world.find_body("Earth").unwrap_or(1), &stars);
+    fb.composite_pixels();
     fb.composite_braille();
     print!("{}", fb.to_text());
 

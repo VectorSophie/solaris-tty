@@ -37,6 +37,7 @@ fn run_loop(loaded: Loaded) -> Result<()> {
     let mut fb = FrameBuffer::new(tw, th);
     let mut cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
 
+    let stars = render::starfield::generate(500);
     let mut selected = world.find_body("Earth").unwrap_or(1).min(world.bodies.len() - 1);
     let mut steps_per_frame: u32 = world.substeps.max(1);
     let mut paused = false;
@@ -150,7 +151,8 @@ fn run_loop(loaded: Loaded) -> Result<()> {
 
         // --- render ---
         fb.clear();
-        render::scene::render(&mut fb, &cam, &world, selected);
+        render::scene::render(&mut fb, &cam, &world, selected, &stars);
+        fb.composite_pixels();
         fb.composite_braille();
         draw_hud(
             &mut fb,

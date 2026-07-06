@@ -10,8 +10,13 @@ pub struct FrameBuffer {
     pub height: u16,
     current: Vec<Cell>,
     previous: Vec<Cell>,
+    // Half-block pixel layer at width × 2·height: bodies and stars render here
+    // as square-ish colour pixels, then composite into ▀/▄ cells. Gives smooth
+    // shaded spheres instead of ASCII-ramp text.
+    px_color: Vec<Color>,
+    px_depth: Vec<f32>,
     // Braille trail layer: one accumulating 8-dot mask per cell, with the
-    // nearest depth and its colour. Composited into cells after body discs.
+    // nearest depth and its colour. Composited over bodies.
     braille_mask: Vec<u8>,
     braille_depth: Vec<f32>,
     braille_color: Vec<Color>,
@@ -20,14 +25,63 @@ pub struct FrameBuffer {
 impl FrameBuffer {
     pub fn new(width: u16, height: u16) -> Self {
         let n = width as usize * height as usize;
+        let pn = n * 2;
         Self {
             width,
             height,
             current: vec![Cell::EMPTY; n],
             previous: vec![Cell { ch: '\x01', ..Cell::EMPTY }; n],
+            px_color: vec![Color::Reset; pn],
+            px_depth: vec![0.0; pn],
             braille_mask: vec![0; n],
             braille_depth: vec![0.0; n],
             braille_color: vec![Color::Reset; n],
+        }
+    }
+
+    /// Pixel-space height for body/star rendering (2× cell height).
+    #[inline]
+    pub fn pixel_height(&self) -> u16 {
+        self.height * 2
+    }
+
+    /// Depth-tested write into the half-block pixel layer. `px` in [0,W),
+    /// `py` in [0,2·H).
+    pub fn write_pixel(&mut self, px: i32, py: i32, color: Color, depth: f32) {
+        if px < 0 || py < 0 || px as u16 >= self.width || py as u16 >= self.pixel_height() {
+            return;
+        }
+        let idx = py as usize * self.width as usize + px as usize;
+        if depth >= self.px_depth[idx] {
+            self.px_depth[idx] = depth;
+            self.px_color[idx] = color;
+        }
+    }
+
+    /// Composite the pixel layer into cells as ▀/▄ half-blocks (top pixel = fg,
+    /// bottom = bg). Depth-tested against existing cells.
+    pub fn composite_pixels(&mut self) {
+        let w = self.width as usize;
+        for cy in 0..self.height as usize {
+            for cx in 0..w {
+                let top = cy * 2 * w + cx;
+                let bot = (cy * 2 + 1) * w + cx;
+                let (td, bd) = (self.px_depth[top], self.px_depth[bot]);
+                if td <= 0.0 && bd <= 0.0 {
+                    continue;
+                }
+                let (ch, fg, bg, depth) = if td > 0.0 && bd > 0.0 {
+                    ('▀', self.px_color[top], self.px_color[bot], td.max(bd))
+                } else if td > 0.0 {
+                    ('▀', self.px_color[top], Color::Reset, td)
+                } else {
+                    ('▄', self.px_color[bot], Color::Reset, bd)
+                };
+                let ci = cy * w + cx;
+                if depth >= self.current[ci].depth {
+                    self.current[ci] = Cell { ch, fg, bg, depth };
+                }
+            }
         }
     }
 
@@ -123,6 +177,9 @@ impl FrameBuffer {
     pub fn clear(&mut self) {
         for c in &mut self.current {
             *c = Cell::EMPTY;
+        }
+        for d in &mut self.px_depth {
+            *d = 0.0;
         }
         for m in &mut self.braille_mask {
             *m = 0;
