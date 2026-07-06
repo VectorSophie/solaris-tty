@@ -18,13 +18,19 @@ fn solar_toml_parses_and_has_expected_bodies() {
 
 #[test]
 fn moons_are_offset_from_their_parent() {
+    use solaris_tty::sim::body::{vec_len, vec_sub};
     let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
     let w = &loaded.world;
     let earth = w.find_body("Earth").unwrap();
     let moon = w.find_body("Moon").unwrap();
-    let dx = w.bodies[moon].pos[0] - w.bodies[earth].pos[0];
-    // Moon should sit ~384,400 km from Earth, not from the Sun.
-    assert!((dx - 3.844e8).abs() < 1e6, "moon offset wrong: {dx}");
+    // Kepler-placed: separation should lie within [a(1-e), a(1+e)] of Earth,
+    // i.e. near 384,400 km — from Earth, not from the Sun.
+    let sep = vec_len(vec_sub(w.bodies[moon].pos, w.bodies[earth].pos));
+    let (a, e) = (3.844e8, 0.0549);
+    assert!(
+        sep > a * (1.0 - e) - 1e6 && sep < a * (1.0 + e) + 1e6,
+        "moon separation {sep} outside orbit band"
+    );
 }
 
 #[test]

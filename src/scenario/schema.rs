@@ -117,6 +117,32 @@ pub struct BodySpec {
     pub position: Option<[f64; 3]>,
     #[serde(default)]
     pub velocity: Option<[f64; 3]>,
+
+    /// Keplerian elements (degrees). If `eccentricity` is present the body is
+    /// placed from elements about its central mass, using `distance` as the
+    /// semi-major axis (m). Missing angles get a deterministic spread.
+    #[serde(default)]
+    pub eccentricity: Option<f64>,
+    #[serde(default)]
+    pub inclination: Option<f64>,
+    #[serde(default)]
+    pub lon_asc_node: Option<f64>,
+    #[serde(default)]
+    pub arg_periapsis: Option<f64>,
+    #[serde(default)]
+    pub mean_anomaly: Option<f64>,
+
+    /// Descriptive physical data for the details card (no effect on physics).
+    #[serde(default)]
+    pub axial_tilt: Option<f64>,     // degrees
+    #[serde(default)]
+    pub rotation_hours: Option<f64>, // sidereal, negative = retrograde
+    #[serde(default)]
+    pub ring_inner: Option<f64>,     // ring inner radius / body radius
+    #[serde(default)]
+    pub ring_outer: Option<f64>,
+    #[serde(default)]
+    pub about: Option<String>,       // one-line description
 }
 
 fn default_kind() -> String {

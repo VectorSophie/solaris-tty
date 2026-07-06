@@ -72,6 +72,23 @@ fn vis_viva_holds_for_circular_orbit() {
 }
 
 #[test]
+fn kepler_circular_orbit_matches_vis_viva() {
+    use solaris_tty::sim::body::vec_len;
+    use solaris_tty::sim::kepler::state_from_elements;
+    let mu = GM_SUN;
+    let a = AU;
+    // e=0, i=30°, M=90° (a quarter-orbit past the node, so off the node line):
+    // circular speed √(mu/a), and the inclination lifts it out of the plane.
+    let (pos, vel) = state_from_elements(mu, a, 0.0, 30f64.to_radians(), 0.0, 0.0, std::f64::consts::FRAC_PI_2);
+    let r = vec_len(pos);
+    let v = vec_len(vel);
+    assert!((r - a).abs() / a < 1e-9, "r = {r}");
+    assert!((v - (mu / a).sqrt()).abs() / v < 1e-9, "v = {v}");
+    // z ≈ a·sin(i) here.
+    assert!((pos[2] - a * 30f64.to_radians().sin()).abs() / a < 1e-9, "z = {}", pos[2]);
+}
+
+#[test]
 fn fast_body_is_hyperbolic() {
     // 1.5 × circular speed exceeds escape (√2 ≈ 1.414 × circular).
     let world = sun_and_body(1.0, 1.5);

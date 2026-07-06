@@ -25,6 +25,12 @@ pub struct Body {
     pub glyph: char,
     /// Past positions for the render trail (most recent at the back).
     pub trail: VecDeque<[f64; 3]>,
+    /// Descriptive metadata for the details card (no effect on physics).
+    pub axial_tilt: Option<f64>,
+    pub rotation_hours: Option<f64>,
+    pub ring_inner: Option<f64>,
+    pub ring_outer: Option<f64>,
+    pub about: Option<String>,
 }
 
 impl Body {
@@ -38,6 +44,11 @@ impl Body {
             vel: [0.0; 3],
             glyph: '●',
             trail: VecDeque::new(),
+            axial_tilt: None,
+            rotation_hours: None,
+            ring_inner: None,
+            ring_outer: None,
+            about: None,
         }
     }
 

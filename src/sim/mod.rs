@@ -4,6 +4,7 @@ pub mod body;
 pub mod diagnostics;
 pub mod gravity;
 pub mod integrator;
+pub mod kepler;
 pub mod orbit;
 pub mod units;
 pub mod world;

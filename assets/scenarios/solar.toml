@@ -1,10 +1,10 @@
 name = "Realistic Solar System"
-description = "Approximate Newtonian Solar System using real masses, distances, and velocities. Realistic in data, compressed in rendering. See docs/superpowers/specs for sources (NASA fact sheets + JPL satellite GM)."
+description = "Newtonian Solar System from real masses, radii, and J2000 orbital elements (a, e, i, Ω, ω, M). Realistic in data, compressed in rendering. Sources: NASA fact sheets, JPL satellite GM, JPL approximate planetary positions."
 
 [simulation]
 units = "si"
 # 300 s keeps even the tightest moons (Phobos, ~7.6 h period) well-resolved and
-# stable. `substeps` here is the default steps-per-frame; the app tunes it live.
+# stable. `substeps` is the default steps-per-frame; the app tunes it live.
 time_step = 300.0
 substeps = 240
 integrator = "leapfrog"
@@ -25,7 +25,7 @@ show_on_spawn = true
 show_on_collision = true
 show_on_escape = true
 
-# --- Star ---
+# ── Star ────────────────────────────────────────────────────────────────────
 
 [[bodies]]
 name = "Sun"
@@ -35,35 +35,59 @@ radius = 6.9634e8
 distance = 0.0
 orbital_velocity = 0.0
 glyph = "*"
+axial_tilt = 7.25
+rotation_hours = 609.12
+about = "G2V main-sequence star holding 99.86% of the system's mass"
 
-# --- Planets (heliocentric) & their moons (parent-relative) ---
+# ── Planets (J2000 heliocentric elements) & their moons ─────────────────────
 
 [[bodies]]
 name = "Mercury"
 kind = "planet"
 mass = 3.30e23
 radius = 2.4397e6
-distance = 5.79e10
-orbital_velocity = 47870.0
+distance = 5.79091e10
+eccentricity = 0.20563593
+inclination = 7.00497902
+lon_asc_node = 48.33076593
+arg_periapsis = 29.12701
+mean_anomaly = 174.79252
+axial_tilt = 0.03
+rotation_hours = 1407.6
 glyph = "o"
+about = "Smallest planet; cratered, airless, extreme temperature swings"
 
 [[bodies]]
 name = "Venus"
 kind = "planet"
 mass = 4.867e24
 radius = 6.0518e6
-distance = 1.082e11
-orbital_velocity = 35020.0
+distance = 1.082095e11
+eccentricity = 0.00677672
+inclination = 3.39467605
+lon_asc_node = 76.67984255
+arg_periapsis = 54.92262
+mean_anomaly = 50.37663
+axial_tilt = 177.36
+rotation_hours = -5832.5
 glyph = "O"
+about = "Runaway greenhouse; thick CO2 air, ~737 K surface, retrograde spin"
 
 [[bodies]]
 name = "Earth"
 kind = "planet"
 mass = 5.9722e24
 radius = 6.371e6
-distance = 1.495978707e11
-orbital_velocity = 29780.0
+distance = 1.495982612e11
+eccentricity = 0.01671123
+inclination = 0.00001531
+lon_asc_node = 0.0
+arg_periapsis = 102.93768
+mean_anomaly = 357.52689
+axial_tilt = 23.44
+rotation_hours = 23.93
 glyph = "@"
+about = "The only known life-bearing world; liquid-water oceans"
 
 [[bodies]]
 name = "Moon"
@@ -72,17 +96,28 @@ parent = "Earth"
 mass = 7.342e22
 radius = 1.7374e6
 distance = 3.844e8
-orbital_velocity = 1022.0
+eccentricity = 0.0549
+inclination = 5.145
+axial_tilt = 6.68
+rotation_hours = 655.7
 glyph = "."
+about = "Earth's only natural satellite; drives the ocean tides"
 
 [[bodies]]
 name = "Mars"
 kind = "planet"
 mass = 6.417e23
 radius = 3.3895e6
-distance = 2.279e11
-orbital_velocity = 24070.0
+distance = 2.279439e11
+eccentricity = 0.09339410
+inclination = 1.84969142
+lon_asc_node = 49.55953891
+arg_periapsis = 286.49637
+mean_anomaly = 19.39020
+axial_tilt = 25.19
+rotation_hours = 24.62
 glyph = "r"
+about = "Cold desert; hosts the largest volcano and canyon in the system"
 
 [[bodies]]
 name = "Phobos"
@@ -90,9 +125,10 @@ kind = "moon"
 parent = "Mars"
 mass = 1.06e16
 radius = 1.108e4
-distance = 9.377e6
-orbital_velocity = 2138.0
-glyph = "."
+distance = 9.376e6
+eccentricity = 0.0151
+inclination = 1.08
+about = "Inner Mars moon spiraling inward; doomed in ~50 Myr"
 
 [[bodies]]
 name = "Deimos"
@@ -100,18 +136,26 @@ kind = "moon"
 parent = "Mars"
 mass = 1.44e15
 radius = 6.2e3
-distance = 2.346e7
-orbital_velocity = 1351.0
-glyph = "."
+distance = 2.3463e7
+eccentricity = 0.00033
+inclination = 1.79
+about = "Outer Mars moon; tiny, lumpy, and smooth-surfaced"
 
 [[bodies]]
 name = "Jupiter"
 kind = "planet"
 mass = 1.898e27
 radius = 6.9911e7
-distance = 7.785e11
-orbital_velocity = 13070.0
+distance = 7.783408e11
+eccentricity = 0.04838624
+inclination = 1.30439695
+lon_asc_node = 100.47390909
+arg_periapsis = 274.25457
+mean_anomaly = 19.66796
+axial_tilt = 3.13
+rotation_hours = 9.93
 glyph = "J"
+about = "Largest planet; gas giant with the centuries-old Great Red Spot"
 
 [[bodies]]
 name = "Io"
@@ -120,8 +164,9 @@ parent = "Jupiter"
 mass = 8.932e22
 radius = 1.8215e6
 distance = 4.217e8
-orbital_velocity = 17334.0
-glyph = "."
+eccentricity = 0.0041
+inclination = 0.036
+about = "The most volcanically active body in the Solar System"
 
 [[bodies]]
 name = "Europa"
@@ -130,8 +175,9 @@ parent = "Jupiter"
 mass = 4.800e22
 radius = 1.5608e6
 distance = 6.711e8
-orbital_velocity = 13740.0
-glyph = "."
+eccentricity = 0.009
+inclination = 0.466
+about = "Icy crust over a probable global subsurface ocean"
 
 [[bodies]]
 name = "Ganymede"
@@ -140,8 +186,9 @@ parent = "Jupiter"
 mass = 1.4819e23
 radius = 2.6312e6
 distance = 1.0704e9
-orbital_velocity = 10880.0
-glyph = "."
+eccentricity = 0.0013
+inclination = 0.177
+about = "Largest moon in the system — bigger than Mercury"
 
 [[bodies]]
 name = "Callisto"
@@ -150,17 +197,27 @@ parent = "Jupiter"
 mass = 1.0759e23
 radius = 2.4103e6
 distance = 1.8827e9
-orbital_velocity = 8204.0
-glyph = "."
+eccentricity = 0.0074
+inclination = 0.192
+about = "Heavily cratered; one of the oldest surfaces known"
 
 [[bodies]]
 name = "Saturn"
 kind = "planet"
 mass = 5.683e26
 radius = 5.8232e7
-distance = 1.4335e12
-orbital_velocity = 9680.0
+distance = 1.426666e12
+eccentricity = 0.05386179
+inclination = 2.48599187
+lon_asc_node = 113.66242448
+arg_periapsis = 338.93646
+mean_anomaly = 317.35537
+axial_tilt = 26.73
+rotation_hours = 10.66
+ring_inner = 1.24
+ring_outer = 2.27
 glyph = "S"
+about = "Gas giant famed for its broad, bright ring system"
 
 [[bodies]]
 name = "Titan"
@@ -169,23 +226,40 @@ parent = "Saturn"
 mass = 1.3452e23
 radius = 2.5747e6
 distance = 1.2219e9
-orbital_velocity = 5570.0
-glyph = "."
+eccentricity = 0.0288
+inclination = 0.34
+about = "Thick nitrogen atmosphere; lakes of liquid methane"
 
 [[bodies]]
 name = "Uranus"
 kind = "planet"
 mass = 8.681e25
 radius = 2.5362e7
-distance = 2.8725e12
-orbital_velocity = 6800.0
+distance = 2.870656e12
+eccentricity = 0.04725744
+inclination = 0.77263783
+lon_asc_node = 74.01692503
+arg_periapsis = 96.93835
+mean_anomaly = 142.28383
+axial_tilt = 97.77
+rotation_hours = -17.24
+ring_inner = 1.64
+ring_outer = 2.00
 glyph = "U"
+about = "Ice giant tipped on its side by a 98° axial tilt"
 
 [[bodies]]
 name = "Neptune"
 kind = "planet"
 mass = 1.024e26
 radius = 2.4622e7
-distance = 4.4951e12
-orbital_velocity = 5430.0
+distance = 4.498394e12
+eccentricity = 0.00859048
+inclination = 1.77004347
+lon_asc_node = 131.78422574
+arg_periapsis = 273.18027
+mean_anomaly = 259.91520
+axial_tilt = 28.32
+rotation_hours = 16.11
 glyph = "N"
+about = "Windiest planet; farthest major world from the Sun"
