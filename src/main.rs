@@ -73,7 +73,16 @@ fn frame() -> Result<()> {
         world.record_trails(400);
     }
     let mut fb = FrameBuffer::new(120, 40);
-    let cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
+    // Optional `focus=<Body>` arg to zoom in on a body (e.g. to see rings).
+    let focus = std::env::args().find_map(|a| a.strip_prefix("focus=").map(String::from));
+    let cam = match focus.as_deref().and_then(|n| world.find_body(n)) {
+        Some(i) => {
+            use solaris_tty::render::scale::world_to_render;
+            let c = world_to_render(mode, world.bodies[i].pos);
+            Camera::looking_at(c + Vec3::new(0.0, 0.8, 2.2), c)
+        }
+        None => Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0)),
+    };
     let stars = solaris_tty::render::starfield::generate(500);
     fb.clear();
     scene::render(

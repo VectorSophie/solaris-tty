@@ -48,8 +48,7 @@ pub fn render(
     for s in stars {
         let world_pt = cam.pos + s.dir * STAR_DIST;
         if let Some((px, py, _)) = project(&mvp, world_pt, wf, phf) {
-            let v = (s.bright * 255.0) as u8;
-            fb.write_pixel(px as i32, py as i32, Color::Rgb { r: v, g: v, b: v }, STAR_DEPTH);
+            fb.write_pixel(px as i32, py as i32, s.color, STAR_DEPTH);
         }
     }
 
@@ -70,6 +69,31 @@ pub fn render(
             let rp = world_to_render(mode, *tp);
             if let Some((px, py, iz)) = project(&mvp, rp, wf, phf) {
                 fb.plot_braille((px * 2.0) as i32, (py * 2.0) as i32, iz, col);
+            }
+        }
+    }
+
+    // --- planetary rings (braille, in the planet's tilted equatorial plane) ---
+    for b in &world.bodies {
+        let (Some(ri), Some(ro)) = (b.ring_inner, b.ring_outer) else {
+            continue;
+        };
+        let center = world_to_render(mode, b.pos);
+        let rr = render_radius(mode, b);
+        let tilt = b.axial_tilt.unwrap_or(0.0).to_radians() as f32;
+        // Spin axis = Y tilted about X; ring plane basis (u, v) spans it.
+        let u = Vec3::new(1.0, 0.0, 0.0);
+        let v = Vec3::new(0.0, tilt.sin(), -tilt.cos());
+        let col = scale(body_color(&b.name, b.kind), 0.85);
+        for step in 0..3 {
+            let f = ri as f32 + (ro as f32 - ri as f32) * step as f32 / 2.0;
+            let radius = rr * f;
+            for k in 0..96 {
+                let th = k as f32 / 96.0 * std::f32::consts::TAU;
+                let p = center + (u * th.cos() + v * th.sin()) * radius;
+                if let Some((px, py, iz)) = project(&mvp, p, wf, phf) {
+                    fb.plot_braille((px * 2.0) as i32, (py * 2.0) as i32, iz, col);
+                }
             }
         }
     }

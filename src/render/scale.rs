@@ -87,16 +87,18 @@ pub fn render_radius(mode: ScaleMode, b: &Body) -> f32 {
 
 fn kind_radius(b: &Body, k: f32) -> f32 {
     k * match b.kind {
-        Kind::Star => 0.9,
+        Kind::Star => 1.0,
         Kind::Planet => {
-            if b.radius > 3.0e7 {
-                0.45 // gas giant
+            if b.radius > 6.0e7 {
+                0.55 // Jupiter/Saturn
+            } else if b.radius > 2.0e7 {
+                0.42 // Uranus/Neptune
             } else {
-                0.20 // terrestrial
+                0.17 // terrestrial
             }
         }
-        Kind::Moon => 0.10,
-        Kind::Satellite => 0.06,
-        Kind::Debris => 0.04,
+        Kind::Moon => 0.09,
+        Kind::Satellite => 0.05,
+        Kind::Debris => 0.035,
     }
 }

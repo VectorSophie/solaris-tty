@@ -15,7 +15,12 @@ pub struct Camera {
 impl Camera {
     /// Start pulled back and above, looking at the origin (the Sun).
     pub fn looking_at_origin(pos: Vec3) -> Self {
-        let fwd = (-pos).normalize_or_zero();
+        Self::looking_at(pos, Vec3::ZERO)
+    }
+
+    /// Camera at `pos` aimed at `target`.
+    pub fn looking_at(pos: Vec3, target: Vec3) -> Self {
+        let fwd = (target - pos).normalize_or_zero();
         let yaw = fwd.x.atan2(fwd.z);
         let pitch = fwd.y.asin();
         Camera {
