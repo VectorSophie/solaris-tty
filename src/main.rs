@@ -1,40 +1,56 @@
 //! solaris-tty entry point.
 //!
-//! v0.1 is under construction: the physics core (`sim/`) lands first, then the
-//! scenario loader, renderer, and interactive app loop. For now this binary
-//! runs a headless sanity demo of the physics so `cargo run` does something.
+//! v0.1 is under construction. The physics core and scenario loader are in;
+//! the renderer and interactive app loop are next. For now this binary loads
+//! the default Solar System headlessly and reports its stability so
+//! `cargo run` / `solaris-tty run solar` does something real.
 
-use solaris_tty::sim::body::{Body, Kind};
-use solaris_tty::sim::units::{AU, GM_SUN, G, M_SUN};
-use solaris_tty::sim::World;
+use anyhow::Result;
+use solaris_tty::sim::gravity::dominant_attractor;
+use solaris_tty::sim::orbit::elements;
+use solaris_tty::SOLAR_TOML;
 
-fn main() {
-    // Sun + Earth on a circular orbit, integrated for one year.
-    let mut sun = Body::new("Sun", Kind::Star, M_SUN, 6.9634e8);
-    sun.glyph = '*';
+fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    let scenario = match args.get(1).map(String::as_str) {
+        Some("run") => args.get(2).map(String::as_str).unwrap_or("solar"),
+        _ => "solar",
+    };
+    if scenario != "solar" {
+        eprintln!("only the bundled 'solar' scenario exists so far");
+    }
 
-    let mut earth = Body::new("Earth", Kind::Planet, 5.9722e24, 6.371e6);
-    earth.pos = [AU, 0.0, 0.0];
-    earth.vel = [0.0, (GM_SUN / AU).sqrt(), 0.0]; // circular velocity
+    let loaded = solaris_tty::scenario::from_str(SOLAR_TOML)?;
+    let mut world = loaded.world;
 
-    let mut world = World::new(vec![sun, earth], G, 3600.0, 4, 1e3);
-    let v_com = world.apply_barycentric_correction();
+    println!("Loaded Solar System: {} bodies", world.bodies.len());
+    println!(
+        "Barycentric correction: V_com = [{:.3e}, {:.3e}, {:.3e}] m/s",
+        loaded.v_com[0], loaded.v_com[1], loaded.v_com[2]
+    );
 
-    println!("solaris-tty physics demo");
-    println!("barycentric V_com = [{:.3e}, {:.3e}, {:.3e}] m/s", v_com[0], v_com[1], v_com[2]);
-    println!("initial energy = {:.6e} J", world.total_energy());
+    // Classify each body against its dominant attractor at t=0.
+    println!("\nInitial orbit classification:");
+    for i in 0..world.bodies.len() {
+        if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+            let mu = world.g * world.bodies[a].mass;
+            let (apos, avel) = (world.bodies[a].pos, world.bodies[a].vel);
+            let e = elements(&world.bodies[i], apos, avel, mu);
+            println!(
+                "  {:<9} around {:<8}  e={:.3}  {}",
+                world.bodies[i].name, world.bodies[a].name, e.eccentricity, e.status()
+            );
+        } else {
+            println!("  {:<9} (no attractor)", world.bodies[i].name);
+        }
+    }
 
-    // One year, hourly steps.
+    // Integrate one year and report energy conservation.
     let year = 365.25 * 24.0 * 3600.0;
     let ticks = (year / (world.dt * world.substeps as f64)) as u32;
     for _ in 0..ticks {
         world.advance();
     }
-
-    let earth = &world.bodies[1];
-    println!(
-        "after 1 yr: Earth at [{:.4e}, {:.4e}, {:.4e}] m",
-        earth.pos[0], earth.pos[1], earth.pos[2]
-    );
-    println!("energy drift = {:+.6}%", world.energy_drift_pct());
+    println!("\nAfter 1 simulated year: energy drift = {:+.6}%", world.energy_drift_pct());
+    Ok(())
 }
