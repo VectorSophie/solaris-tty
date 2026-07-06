@@ -18,7 +18,11 @@ Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate
 - [x] Free-fly camera + Physics Trace panel (compact / expanded / debug)
 - [x] Interactive app loop, `--bench`
 - [x] `:spawn` / `:inspect` command line with live spawn trace
-- [ ] Live editing (`:set mass/vel/...`), collisions, escape/decay detection, scale modes, rewind (roadmap)
+- [x] Real J2000 orbits (eccentricity + inclination) — a genuinely 3D system
+- [x] Scale modes: compressed / realistic / educational
+- [x] Screensaver mode (auto-orbiting camera)
+- [x] Right-click details card (physical + orbital data), planetary rings, starfield
+- [ ] Live editing (`:set mass/vel/...`), collisions, escape/decay detection, rewind (roadmap)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.
@@ -29,16 +33,19 @@ for the full design and the verified physical dataset.
 solaris-tty                # or: cargo run --release
 ```
 
-Controls: **WASD/R/F** fly · **arrows** look · **Tab** select body · **[ ]** speed ·
-**Space** pause · **.** step · **m** cycle trace mode (compact/expanded/debug) ·
-**:** command line · **q** quit.
+Controls: **WASD/R/F** fly · **arrows** look · **right-click** a body for its details
+card · **Tab** select · **[ ]** speed · **Space** pause · **.** step ·
+**v** cycle scale mode · **z** screensaver · **m** trace mode · **:** command · **q** quit.
 
-Spawn a body and watch the math:
+Spawn a body and watch the math, inspect, or switch scale:
 
 ```
 :spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0
 :inspect Mars
+:scale realistic     # or compressed / educational
 ```
+
+Launch straight into the screensaver: `solaris-tty --screensaver`
 
 Other modes:
 
