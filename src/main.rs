@@ -25,7 +25,8 @@ fn main() -> Result<()> {
 
     // Default: interactive TUI. `run <scenario>` accepted; only "solar" exists.
     let loaded = solaris_tty::scenario::from_str(SOLAR_TOML)?;
-    solaris_tty::app::run(loaded)
+    let screensaver = flags.contains(&"--screensaver");
+    solaris_tty::app::run(loaded, screensaver)
 }
 
 fn check() -> Result<()> {
@@ -58,8 +59,12 @@ fn check() -> Result<()> {
 /// Render a single frame to a plain-text grid on stdout (headless check).
 fn frame() -> Result<()> {
     use glam::Vec3;
+    use solaris_tty::render::scale::ScaleMode;
     use solaris_tty::render::{camera::Camera, scene, FrameBuffer};
 
+    let mode = std::env::args()
+        .find_map(|a| ScaleMode::from_name(&a))
+        .unwrap_or(ScaleMode::Compressed);
     let loaded = solaris_tty::scenario::from_str(SOLAR_TOML)?;
     let mut world = loaded.world;
     // Build up some trail history.
@@ -71,7 +76,14 @@ fn frame() -> Result<()> {
     let cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
     let stars = solaris_tty::render::starfield::generate(500);
     fb.clear();
-    scene::render(&mut fb, &cam, &world, world.find_body("Earth").unwrap_or(1), &stars);
+    scene::render(
+        &mut fb,
+        &cam,
+        &world,
+        world.find_body("Earth").unwrap_or(1),
+        &stars,
+        mode,
+    );
     fb.composite_pixels();
     fb.composite_braille();
     print!("{}", fb.to_text());

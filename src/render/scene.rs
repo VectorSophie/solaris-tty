@@ -10,7 +10,7 @@ use glam::{Mat4, Vec3, Vec4};
 
 use super::camera::Camera;
 use super::framebuffer::FrameBuffer;
-use super::scale::{render_radius, world_to_render};
+use super::scale::{render_radius, world_to_render, ScaleMode};
 use super::starfield::Star;
 use crate::sim::body::Kind;
 use crate::sim::World;
@@ -31,7 +31,14 @@ fn project(mvp: &Mat4, p: Vec3, w: f32, ph: f32) -> Option<(f32, f32, f32)> {
     Some((px, py, 1.0 / clip.w))
 }
 
-pub fn render(fb: &mut FrameBuffer, cam: &Camera, world: &World, selected: usize, stars: &[Star]) {
+pub fn render(
+    fb: &mut FrameBuffer,
+    cam: &Camera,
+    world: &World,
+    selected: usize,
+    stars: &[Star],
+    mode: ScaleMode,
+) {
     let (w, h) = fb.size();
     let (wf, phf) = (w as f32, (h as u16 * 2) as f32);
     let aspect = (w as f32 / h as f32) * 0.5; // pixels are square in this layer
@@ -60,7 +67,7 @@ pub fn render(fb: &mut FrameBuffer, cam: &Camera, world: &World, selected: usize
             if i % 2 == 0 && i < n * 3 / 4 {
                 continue; // taper older points
             }
-            let rp = world_to_render(*tp);
+            let rp = world_to_render(mode, *tp);
             if let Some((px, py, iz)) = project(&mvp, rp, wf, phf) {
                 fb.plot_braille((px * 2.0) as i32, (py * 2.0) as i32, iz, col);
             }
@@ -69,12 +76,12 @@ pub fn render(fb: &mut FrameBuffer, cam: &Camera, world: &World, selected: usize
 
     // --- bodies as shaded half-block spheres ---
     for (bi, b) in world.bodies.iter().enumerate() {
-        let center = world_to_render(b.pos);
+        let center = world_to_render(mode, b.pos);
         let (cx, cy, iz) = match project(&mvp, center, wf, phf) {
             Some(v) => v,
             None => continue,
         };
-        let rr = render_radius(b);
+        let rr = render_radius(mode, b);
         let rx = edge_px(&mvp, center, right * rr, cx, cy, wf, phf).max(0.7);
         let ry = edge_px(&mvp, center, up * rr, cx, cy, wf, phf).max(0.7);
 
@@ -110,8 +117,8 @@ pub fn render(fb: &mut FrameBuffer, cam: &Camera, world: &World, selected: usize
             }
         }
 
-        // Label near the body (skip tiny moons unless selected).
-        if b.kind != Kind::Moon || bi == selected {
+        // Label near the body (skip tiny moons unless selected/educational).
+        if mode.labels_all() || b.kind != Kind::Moon || bi == selected {
             let lx = (cx + rx + 1.0) as i32;
             let ly = (cy / 2.0) as i32; // pixel row → cell row
             if fb.in_bounds(lx, ly) {

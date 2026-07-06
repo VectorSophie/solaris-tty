@@ -8,6 +8,7 @@ use crossterm::style::Color;
 use glam::Vec3;
 
 use crate::command;
+use crate::render::scale::ScaleMode;
 use crate::render::scene::body_color;
 use crate::render::{camera::Camera, cell::Cell, terminal, FrameBuffer};
 use crate::scenario::Loaded;
@@ -21,15 +22,15 @@ enum TraceMode {
     Debug,
 }
 
-pub fn run(loaded: Loaded) -> Result<()> {
+pub fn run(loaded: Loaded, screensaver: bool) -> Result<()> {
     terminal::install_panic_hook();
     terminal::setup()?;
-    let result = run_loop(loaded);
+    let result = run_loop(loaded, screensaver);
     terminal::restore()?;
     result
 }
 
-fn run_loop(loaded: Loaded) -> Result<()> {
+fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut world = loaded.world;
     let trail_len = loaded.trail_length.min(1200);
 
@@ -38,6 +39,9 @@ fn run_loop(loaded: Loaded) -> Result<()> {
     let mut cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
 
     let stars = render::starfield::generate(500);
+    let mut scale_mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
+    let mut screensaver = screensaver_start;
+    let mut saver_angle: f32 = 0.0;
     let mut selected = world.find_body("Earth").unwrap_or(1).min(world.bodies.len() - 1);
     let mut steps_per_frame: u32 = world.substeps.max(1);
     let mut paused = false;
@@ -73,17 +77,28 @@ fn run_loop(loaded: Loaded) -> Result<()> {
                             KeyCode::Enter => {
                                 let line = std::mem::take(buf);
                                 command_buf = None;
-                                match command::execute(&mut world, &line) {
-                                    Ok(out) => {
-                                        if let Some(p) = out.panel {
-                                            panel_override = Some(p);
+                                // `:scale <mode>` is app state, handled here.
+                                if let Some(arg) = line.trim().strip_prefix("scale ") {
+                                    match ScaleMode::from_name(arg.trim()) {
+                                        Some(m) => {
+                                            scale_mode = m;
+                                            status_msg = Some(format!("scale: {}", m.name()));
                                         }
-                                        if let Some(s) = out.select {
-                                            selected = s;
-                                        }
-                                        status_msg = None;
+                                        None => status_msg = Some(format!("unknown scale '{}'", arg.trim())),
                                     }
-                                    Err(e) => status_msg = Some(format!("error: {e}")),
+                                } else {
+                                    match command::execute(&mut world, &line) {
+                                        Ok(out) => {
+                                            if let Some(p) = out.panel {
+                                                panel_override = Some(p);
+                                            }
+                                            if let Some(s) = out.select {
+                                                selected = s;
+                                            }
+                                            status_msg = None;
+                                        }
+                                        Err(e) => status_msg = Some(format!("error: {e}")),
+                                    }
                                 }
                             }
                             KeyCode::Char(c) => buf.push(c),
@@ -130,6 +145,11 @@ fn run_loop(loaded: Loaded) -> Result<()> {
                             };
                             panel_override = None;
                         }
+                        KeyCode::Char('v') => {
+                            scale_mode = scale_mode.cycle();
+                            status_msg = Some(format!("scale: {}", scale_mode.name()));
+                        }
+                        KeyCode::Char('z') => screensaver = !screensaver,
                         _ => {}
                     }
                 }
@@ -149,22 +169,36 @@ fn run_loop(loaded: Loaded) -> Result<()> {
             world.record_trails(trail_len);
         }
 
+        // Screensaver: slowly orbit the camera around the system, HUD hidden.
+        if screensaver {
+            saver_angle += 0.004;
+            let (r, height) = (24.0, 10.0);
+            cam = Camera::looking_at_origin(Vec3::new(
+                r * saver_angle.cos(),
+                height,
+                r * saver_angle.sin(),
+            ));
+        }
+
         // --- render ---
         fb.clear();
-        render::scene::render(&mut fb, &cam, &world, selected, &stars);
+        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode);
         fb.composite_pixels();
         fb.composite_braille();
-        draw_hud(
-            &mut fb,
-            &world,
-            selected,
-            paused,
-            steps_per_frame,
-            trace_mode,
-            &panel_override,
-            command_buf.as_deref(),
-            status_msg.as_deref(),
-        );
+        if !screensaver {
+            draw_hud(
+                &mut fb,
+                &world,
+                selected,
+                paused,
+                steps_per_frame,
+                trace_mode,
+                scale_mode,
+                &panel_override,
+                command_buf.as_deref(),
+                status_msg.as_deref(),
+            );
+        }
         terminal::flush(&fb)?;
         fb.swap();
 
@@ -183,6 +217,7 @@ fn draw_hud(
     paused: bool,
     steps: u32,
     mode: TraceMode,
+    scale_mode: ScaleMode,
     panel_override: &Option<Vec<String>>,
     command: Option<&str>,
     status_msg: Option<&str>,
@@ -230,8 +265,9 @@ fn draw_hud(
     } else {
         let sim_days = world.time / 86400.0;
         format!(
-            " solaris-tty │ {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · arrows look · Tab select · [ ] speed · Space pause · : spawn · m mode · q quit ",
+            " solaris-tty │ {} │ {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · arrows look · Tab select · [ ] speed · Space pause · : cmd · v scale · z saver · m trace · q quit ",
             if paused { "PAUSED" } else { "RUN" },
+            scale_mode.name(),
             sim_days,
             steps,
             world.energy_drift_pct(),
