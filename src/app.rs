@@ -3,7 +3,7 @@
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind};
 use crossterm::style::Color;
 use glam::Vec3;
 
@@ -53,6 +53,8 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut command_buf: Option<String> = None;
     // One-line feedback (errors / confirmations) shown on the status bar.
     let mut status_msg: Option<String> = None;
+    // Body whose details card is open (right-click), if any.
+    let mut details: Option<usize> = None;
 
     let frame = Duration::from_millis(33);
     loop {
@@ -153,6 +155,19 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                         _ => {}
                     }
                 }
+                Event::Mouse(me) => {
+                    if let MouseEventKind::Down(MouseButton::Right) = me.kind {
+                        // Right-click: open the details card for the nearest body
+                        // (or close it if the click missed everything).
+                        match render::scene::pick(&cam, &world, scale_mode, tw, th, me.column, me.row) {
+                            Some(i) => {
+                                details = Some(i);
+                                selected = i;
+                            }
+                            None => details = None,
+                        }
+                    }
+                }
                 Event::Resize(nw, nh) => {
                     tw = nw;
                     th = nh;
@@ -198,6 +213,9 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 command_buf.as_deref(),
                 status_msg.as_deref(),
             );
+            if let Some(i) = details {
+                draw_details(&mut fb, &world, i);
+            }
         }
         terminal::flush(&fb)?;
         fb.swap();
@@ -275,4 +293,39 @@ fn draw_hud(
     };
     let fg = if command.is_some() { Color::Yellow } else { Color::White };
     fb.write_str(0, h - 1, &bar, fg, Color::DarkGrey);
+}
+
+/// Bordered details card anchored bottom-right (right-click inspection).
+fn draw_details(fb: &mut FrameBuffer, world: &World, i: usize) {
+    let (w, h) = fb.size();
+    let lines = trace::details_lines(world, i);
+    let inner_w = lines.iter().map(|l| l.chars().count()).max().unwrap_or(20).clamp(24, 40);
+    let bw = inner_w as u16 + 2;
+    let bh = lines.len() as u16 + 2;
+    if w < bw || h < bh + 1 {
+        return;
+    }
+    let x0 = w - bw;
+    let y0 = h - 1 - bh; // sit just above the status bar
+    let accent = body_color(&world.bodies[i].name, world.bodies[i].kind);
+
+    // Border + background.
+    for row in 0..bh {
+        for col in 0..bw {
+            let ch = match (row, col) {
+                (0, 0) => '┌',
+                (0, c) if c == bw - 1 => '┐',
+                (r, 0) if r == bh - 1 => '└',
+                (r, c) if r == bh - 1 && c == bw - 1 => '┘',
+                (0, _) | (_, 0) => if row == 0 { '─' } else { '│' },
+                (r, c) if r == bh - 1 || c == bw - 1 => if col == bw - 1 { '│' } else { '─' },
+                _ => ' ',
+            };
+            fb.write_overlay(x0 + col, y0 + row, Cell { ch, fg: accent, bg: Color::Reset, depth: f32::MAX });
+        }
+    }
+    for (r, line) in lines.iter().enumerate() {
+        let fg = if r == 0 { accent } else { Color::Grey };
+        fb.write_str(x0 + 1, y0 + 1 + r as u16, line, fg, Color::Reset);
+    }
 }

@@ -129,6 +129,35 @@ pub fn render(
     }
 }
 
+/// Pick the body whose projected centre is nearest a click at cell (`click_x`,
+/// `click_y`), within a small radius. Returns its index.
+pub fn pick(
+    cam: &Camera,
+    world: &World,
+    mode: ScaleMode,
+    w: u16,
+    h: u16,
+    click_x: u16,
+    click_y: u16,
+) -> Option<usize> {
+    let (wf, phf) = (w as f32, (h * 2) as f32);
+    let aspect = (w as f32 / h as f32) * 0.5;
+    let mvp = cam.projection(aspect) * cam.view();
+    let mut best: Option<(usize, f32)> = None;
+    for (i, b) in world.bodies.iter().enumerate() {
+        if let Some((px, py, _)) = project(&mvp, world_to_render(mode, b.pos), wf, phf) {
+            // Pixel → cell space (cell row = py/2).
+            let dx = px - click_x as f32;
+            let dy = py / 2.0 - click_y as f32;
+            let d = (dx * dx + dy * dy).sqrt();
+            if d <= 4.0 && best.map(|(_, bd)| d < bd).unwrap_or(true) {
+                best = Some((i, d));
+            }
+        }
+    }
+    best.map(|(i, _)| i)
+}
+
 fn edge_px(mvp: &Mat4, center: Vec3, offset: Vec3, cx: f32, cy: f32, w: f32, ph: f32) -> f32 {
     match project(mvp, center + offset, w, ph) {
         Some((ex, ey, _)) => ((ex - cx).powi(2) + (ey - cy).powi(2)).sqrt(),

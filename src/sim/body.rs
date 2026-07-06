@@ -96,3 +96,11 @@ pub fn vec_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 pub fn vec_len(a: [f64; 3]) -> f64 {
     vec_dot(a, a).sqrt()
 }
+
+pub fn vec_cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}

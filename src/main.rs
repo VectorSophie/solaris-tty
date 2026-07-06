@@ -88,6 +88,14 @@ fn frame() -> Result<()> {
     fb.composite_braille();
     print!("{}", fb.to_text());
 
+    // Demo the details card (right-click inspection) headlessly.
+    println!("\n── details card: Saturn ──");
+    if let Some(i) = world.find_body("Saturn") {
+        for l in solaris_tty::trace::details_lines(&world, i) {
+            println!("  {l}");
+        }
+    }
+
     // Demo the spawn trace (the signature feature) headlessly.
     println!("\n$ :spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0\n");
     match solaris_tty::command::execute(

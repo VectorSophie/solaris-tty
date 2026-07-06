@@ -102,6 +102,75 @@ pub fn spawn_lines(world: &World, i: usize) -> Vec<String> {
     out
 }
 
+/// Rich details card for a body (right-click / inspect). Mixes static metadata
+/// with live-computed orbital elements.
+pub fn details_lines(world: &World, i: usize) -> Vec<String> {
+    use crate::sim::units::AU;
+    let b = &world.bodies[i];
+    let kind = match b.kind {
+        crate::sim::body::Kind::Star => "star",
+        crate::sim::body::Kind::Planet => "planet",
+        crate::sim::body::Kind::Moon => "moon",
+        crate::sim::body::Kind::Satellite => "satellite",
+        crate::sim::body::Kind::Debris => "debris",
+    };
+    let mut out = vec![format!("{} · {}", b.name, kind)];
+    if let Some(a) = &b.about {
+        out.push(a.clone());
+    }
+    out.push("─".repeat(30));
+
+    let earth_masses = b.mass / 5.9722e24;
+    let surface_g = world.g * b.mass / (b.radius * b.radius);
+    out.push(format!("mass     {} kg  ({} M⊕)", sci(b.mass), fmt(earth_masses)));
+    out.push(format!("radius   {} km", fmt(b.radius / 1e3)));
+    out.push(format!("density  {} kg/m³", fmt(b.density())));
+    out.push(format!("surf. g  {} m/s²", fmt(surface_g)));
+    if let Some(t) = b.axial_tilt {
+        out.push(format!("axial ⌀  {}°", fmt(t)));
+    }
+    if let Some(r) = b.rotation_hours {
+        let dir = if r < 0.0 { " (retro)" } else { "" };
+        out.push(format!("rotation {} h{}", fmt(r.abs()), dir));
+    }
+    if let (Some(ri), Some(ro)) = (b.ring_inner, b.ring_outer) {
+        out.push(format!("rings    {}–{} R", fmt(ri), fmt(ro)));
+    }
+
+    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+        let att = &world.bodies[a];
+        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        out.push(format!("orbits {}:", att.name));
+        if e.semi_major_axis.is_finite() && e.semi_major_axis > 0.0 {
+            out.push(format!("  a = {} km ({} AU)", sci(e.semi_major_axis / 1e3), fmt(e.semi_major_axis / AU)));
+        }
+        out.push(format!("  e = {:.4}   i = {:.2}°", e.eccentricity, e.inclination.to_degrees()));
+        out.push(format!("  |v| = {} km/s", fmt(e.speed / 1e3)));
+        if let Some(p) = e.period() {
+            let days = p / 86400.0;
+            if days > 900.0 {
+                out.push(format!("  period = {} yr", fmt(days / 365.25)));
+            } else {
+                out.push(format!("  period = {} d", fmt(days)));
+            }
+        }
+        out.push(format!("  {}", e.status()));
+    }
+    out
+}
+
+/// Fixed-ish decimal formatter that stays readable across magnitudes.
+fn fmt(x: f64) -> String {
+    let a = x.abs();
+    if a != 0.0 && (a < 0.01 || a >= 1e5) {
+        format!("{:.3e}", x)
+    } else if a >= 100.0 {
+        format!("{:.0}", x)
+    } else {
+        format!("{:.2}", x)
+    }
+}
+
 /// Debug diagnostics for the developer mode.
 pub fn debug_lines(world: &World, steps_per_frame: u32) -> Vec<String> {
     vec![

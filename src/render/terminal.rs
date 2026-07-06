@@ -4,7 +4,9 @@ use std::io::{stdout, Write};
 
 use anyhow::Result;
 use crossterm::{
-    cursor, execute, queue,
+    cursor,
+    event::{DisableMouseCapture, EnableMouseCapture},
+    execute, queue,
     style::{self, Color},
     terminal::{self, ClearType},
 };
@@ -26,6 +28,7 @@ pub fn setup() -> Result<()> {
     execute!(
         stdout(),
         terminal::EnterAlternateScreen,
+        EnableMouseCapture,
         cursor::Hide,
         terminal::Clear(ClearType::All),
     )?;
@@ -36,6 +39,7 @@ pub fn restore() -> Result<()> {
     let _ = execute!(
         stdout(),
         cursor::Show,
+        DisableMouseCapture,
         style::ResetColor,
         terminal::LeaveAlternateScreen,
     );

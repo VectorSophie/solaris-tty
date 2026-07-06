@@ -1,7 +1,7 @@
 //! Two-body orbital elements relative to a dominant attractor. Drives the
 //! trace panel's classification and the escape/orbit checks.
 
-use super::body::{vec_dot, vec_len, vec_sub, Body};
+use super::body::{vec_cross, vec_dot, vec_len, vec_sub, Body};
 
 /// Orbit classification from specific orbital energy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,6 +23,7 @@ pub struct Elements {
     pub specific_energy: f64, // ε = v²/2 − mu/r
     pub eccentricity: f64,
     pub semi_major_axis: f64, // −mu/(2ε); +inf-ish for ε→0, negative for hyperbolic
+    pub inclination: f64,     // radians, relative to the sim XY (ecliptic) plane
     pub class: Class,
 }
 
@@ -56,6 +57,15 @@ pub fn elements(
         f64::INFINITY
     };
 
+    // Inclination from the specific angular momentum h = r × v.
+    let h = vec_cross(r_vec, v_vec);
+    let h_len = vec_len(h);
+    let inclination = if h_len > 0.0 {
+        (h[2] / h_len).clamp(-1.0, 1.0).acos()
+    } else {
+        0.0
+    };
+
     // Small band around zero counts as parabolic (numerically ε is never exact).
     let class = if specific_energy < -1e-6 * (mu / r) {
         Class::Bound
@@ -74,6 +84,7 @@ pub fn elements(
         specific_energy,
         eccentricity,
         semi_major_axis,
+        inclination,
         class,
     }
 }
