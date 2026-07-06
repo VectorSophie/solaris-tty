@@ -1,0 +1,18 @@
+[package]
+name = "solaris-tty"
+version = "0.1.0"
+edition = "2021"
+description = "A real-time 3D astrophysics simulator in your terminal."
+license = "MIT"
+repository = "https://github.com/VectorSophie/solaris-tty"
+
+[dependencies]
+glam = "0.29"
+crossterm = "0.28"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+anyhow = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
