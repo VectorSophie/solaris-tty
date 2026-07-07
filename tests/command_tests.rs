@@ -12,7 +12,7 @@ fn world() -> solaris_tty::sim::World {
 fn spawn_parses_units_and_adds_body() {
     let mut w = world();
     let n0 = w.bodies.len();
-    let out = execute(&mut w, "spawn name=Theia mass=6.4e23 pos=1au,0,0 vel=0,29.78km/s,0")
+    let out = execute(&mut w, 0, "spawn name=Theia mass=6.4e23 pos=1au,0,0 vel=0,29.78km/s,0")
         .expect("spawn ok");
     assert_eq!(w.bodies.len(), n0 + 1);
     let i = out.select.expect("selected new body");
@@ -26,7 +26,7 @@ fn spawn_parses_units_and_adds_body() {
 #[test]
 fn spawn_defaults_radius_from_mass() {
     let mut w = world();
-    let out = execute(&mut w, "spawn mass=6e24 pos=2au,0,0 vel=0,0,0").unwrap();
+    let out = execute(&mut w, 0, "spawn mass=6e24 pos=2au,0,0 vel=0,0,0").unwrap();
     let i = out.select.unwrap();
     // Radius derived at ~5500 kg/m³ should be roughly Earth-sized.
     let r = w.bodies[i].radius;
@@ -36,13 +36,13 @@ fn spawn_defaults_radius_from_mass() {
 #[test]
 fn spawn_requires_mass() {
     let mut w = world();
-    assert!(execute(&mut w, "spawn name=Nope pos=1au,0,0").is_err());
+    assert!(execute(&mut w, 0, "spawn name=Nope pos=1au,0,0").is_err());
 }
 
 #[test]
 fn inspect_selects_named_body() {
     let mut w = world();
-    let out = execute(&mut w, "inspect Mars").unwrap();
+    let out = execute(&mut w, 0, "inspect Mars").unwrap();
     assert_eq!(out.select, w.find_body("Mars"));
     assert!(out.panel.is_some());
 }
@@ -50,5 +50,23 @@ fn inspect_selects_named_body() {
 #[test]
 fn unknown_command_errors() {
     let mut w = world();
-    assert!(execute(&mut w, "frobnicate x=1").is_err());
+    assert!(execute(&mut w, 0, "frobnicate x=1").is_err());
+}
+
+#[test]
+fn set_edits_named_body_velocity() {
+    let mut w = world();
+    let mars = w.find_body("Mars").unwrap();
+    let out = execute(&mut w, 0, "set Mars vel=0,50km/s,0").expect("set ok");
+    assert_eq!(out.select, Some(mars));
+    assert!((w.bodies[mars].vel[1] - 50_000.0).abs() < 1.0);
+    assert!(out.panel.map(|p| !p.is_empty()).unwrap_or(false));
+}
+
+#[test]
+fn set_without_name_edits_selection() {
+    let mut w = world();
+    let earth = w.find_body("Earth").unwrap();
+    execute(&mut w, earth, "set mass=1e25").expect("set ok");
+    assert!((w.bodies[earth].mass - 1e25).abs() < 1e18);
 }

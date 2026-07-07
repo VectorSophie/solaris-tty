@@ -105,6 +105,19 @@ fn frame() -> Result<()> {
         }
     }
 
+    // Demo the :set edit trace: push Mars past escape velocity.
+    println!("\n$ :set Mars vel=0,50km/s,0\n");
+    if let Some(mars) = world.find_body("Mars") {
+        match solaris_tty::command::execute(&mut world, mars, "set Mars vel=0,50km/s,0") {
+            Ok(out) => {
+                for l in out.panel.unwrap_or_default() {
+                    println!("  {l}");
+                }
+            }
+            Err(e) => println!("  error: {e}"),
+        }
+    }
+
     // Demo a collision trace headlessly: drop an impactor onto Earth.
     println!("\n── collision trace ──");
     if let Some(ei) = world.find_body("Earth") {
@@ -124,6 +137,7 @@ fn frame() -> Result<()> {
     println!("\n$ :spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0\n");
     match solaris_tty::command::execute(
         &mut world,
+        0,
         "spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0",
     ) {
         Ok(out) => {

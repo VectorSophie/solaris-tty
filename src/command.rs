@@ -19,16 +19,74 @@ pub struct Outcome {
     pub select: Option<usize>,
 }
 
-pub fn execute(world: &mut World, line: &str) -> Result<Outcome, String> {
+pub fn execute(world: &mut World, selected: usize, line: &str) -> Result<Outcome, String> {
     let line = line.trim();
     let mut parts = line.split_whitespace();
     let cmd = parts.next().unwrap_or("");
     match cmd {
         "spawn" => spawn(world, parts),
         "inspect" => inspect(world, parts),
+        "set" => set(world, selected, parts),
         "" => Err("empty command".into()),
         other => Err(format!("unknown command: {other}")),
     }
+}
+
+/// `:set [name] key=value...` edits a body in place (the selected body if no
+/// name is given). Keys: mass, radius, pos, vel. Re-shows the classification.
+fn set<'a>(
+    world: &mut World,
+    selected: usize,
+    parts: impl Iterator<Item = &'a str>,
+) -> Result<Outcome, String> {
+    let toks: Vec<&str> = parts.collect();
+    if toks.is_empty() {
+        return Err("usage: set [name] key=value ...".into());
+    }
+    // A leading token without '=' names the target; otherwise edit the selection.
+    let (target, kv) = if !toks[0].contains('=') {
+        let i = world
+            .find_body(toks[0])
+            .ok_or_else(|| format!("no body named '{}'", toks[0]))?;
+        (i, &toks[1..])
+    } else {
+        if selected >= world.bodies.len() {
+            return Err("no body selected".into());
+        }
+        (selected, &toks[..])
+    };
+    if kv.is_empty() {
+        return Err("nothing to set".into());
+    }
+
+    let mut forces_dirty = false;
+    for tok in kv {
+        let (key, val) = tok.split_once('=').ok_or_else(|| format!("expected key=value, got '{tok}'"))?;
+        match key {
+            "mass" => {
+                let m = parse_scalar(val)?;
+                if m <= 0.0 {
+                    return Err("mass must be positive".into());
+                }
+                world.bodies[target].mass = m;
+                forces_dirty = true;
+            }
+            "radius" => world.bodies[target].radius = parse_len(val)?,
+            "vel" => world.bodies[target].vel = parse_vec(val, parse_vel)?,
+            "pos" => {
+                world.bodies[target].pos = parse_vec(val, parse_len)?;
+                forces_dirty = true;
+            }
+            other => return Err(format!("unknown key '{other}'")),
+        }
+    }
+    if forces_dirty {
+        world.refresh_forces();
+    }
+    Ok(Outcome {
+        panel: Some(trace::edit_lines(world, target)),
+        select: Some(target),
+    })
 }
 
 fn inspect<'a>(world: &World, mut parts: impl Iterator<Item = &'a str>) -> Result<Outcome, String> {

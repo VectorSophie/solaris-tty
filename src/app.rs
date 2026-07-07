@@ -1,5 +1,6 @@
 //! Interactive app loop: load scenario, fly the camera, render, inspect.
 
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
@@ -55,6 +56,8 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut status_msg: Option<String> = None;
     // Body whose details card is open (right-click), if any.
     let mut details: Option<usize> = None;
+    // Names of bodies currently on unbound trajectories, to detect new escapes.
+    let mut unbound: HashSet<String> = unbound_names(&world);
 
     let frame = Duration::from_millis(33);
     loop {
@@ -89,7 +92,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                         None => status_msg = Some(format!("unknown scale '{}'", arg.trim())),
                                     }
                                 } else {
-                                    match command::execute(&mut world, &line) {
+                                    match command::execute(&mut world, selected, &line) {
                                         Ok(out) => {
                                             if let Some(p) = out.panel {
                                                 panel_override = Some(p);
@@ -191,6 +194,15 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 status_msg = Some(format!("collision: {} + {}", c.survivor_name, c.other_name));
                 panel_override = Some(trace::collision_lines(&c));
             }
+            // Escape detection: fire a trace when a body newly becomes unbound.
+            let current = unbound_names(&world);
+            for name in current.difference(&unbound) {
+                if let Some(i) = world.find_body(name) {
+                    status_msg = Some(format!("escape: {name} is now unbound"));
+                    panel_override = Some(trace::escape_lines(&world, i));
+                }
+            }
+            unbound = current;
         }
 
         // Screensaver: slowly orbit the camera around the system, HUD hidden.
@@ -302,6 +314,28 @@ fn draw_hud(
     };
     let fg = if command.is_some() { Color::Yellow } else { Color::White };
     fb.write_str(0, h - 1, &bar, fg, Color::DarkGrey);
+}
+
+/// Names of bodies currently on an unbound (ε ≥ 0) trajectory relative to their
+/// dominant attractor. Stars are skipped (a star orbits nothing).
+fn unbound_names(world: &World) -> HashSet<String> {
+    use crate::sim::body::Kind;
+    use crate::sim::gravity::dominant_attractor;
+    use crate::sim::orbit::{elements, Class};
+    let mut set = HashSet::new();
+    for (i, b) in world.bodies.iter().enumerate() {
+        if b.kind == Kind::Star {
+            continue;
+        }
+        if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+            let att = &world.bodies[a];
+            let e = elements(b, att.pos, att.vel, world.g * att.mass);
+            if e.class != Class::Bound {
+                set.insert(b.name.clone());
+            }
+        }
+    }
+    set
 }
 
 /// Shift a stored body index after a collision removed `removed` and left the

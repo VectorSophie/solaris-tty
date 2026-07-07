@@ -175,8 +175,14 @@ impl World {
     /// track the body count) and re-baselining the reference energy.
     pub fn add_body(&mut self, body: Body) -> usize {
         self.bodies.push(body);
+        self.refresh_forces();
+        self.bodies.len() - 1
+    }
+
+    /// Recompute cached acceleration and re-baseline reference energy after an
+    /// in-place edit to a body's mass/position (e.g. via `:set`).
+    pub fn refresh_forces(&mut self) {
         self.acc = accelerations(&self.bodies, self.g, self.softening);
         self.energy_ref = self.total_energy();
-        self.bodies.len() - 1
     }
 }

@@ -171,6 +171,45 @@ fn fmt(x: f64) -> String {
     }
 }
 
+/// Escape trace: fired when a body crosses onto an unbound trajectory.
+pub fn escape_lines(world: &World, i: usize) -> Vec<String> {
+    let b = &world.bodies[i];
+    let mut out = vec![format!("✦ Escape detected: {}", b.name)];
+    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+        let att = &world.bodies[a];
+        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        out.push("  ε = v²/2 − μ/r".into());
+        out.push(format!("    = ({})²/2 − {}/{}", sci(e.speed), sci(e.mu), sci(e.r)));
+        out.push(format!("    = {} J/kg", sci(e.specific_energy)));
+        out.push(format!("  |v| = {} km/s  (v_esc = {} km/s)", sci(e.speed / 1e3), sci(e.v_escape / 1e3)));
+        out.push(String::new());
+        out.push(format!("Status: unbound from {} — {}", att.name, e.status()));
+    }
+    out
+}
+
+/// Edit trace: after a `:set`, show whether the body is now stable, elliptical,
+/// escaping, or doomed — the design's "editing velocity" panel.
+pub fn edit_lines(world: &World, i: usize) -> Vec<String> {
+    let b = &world.bodies[i];
+    let mut out = vec![
+        format!("✎ Edited: {}", b.name),
+        format!("  m = {} kg   r = {} m", sci(b.mass), sci(b.radius)),
+        format!("  |v| = {} km/s", sci(b.speed() / 1e3)),
+    ];
+    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+        let att = &world.bodies[a];
+        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        out.push(format!("At current distance from {}:", att.name));
+        out.push(format!("  circular velocity = {} km/s", sci(e.v_circular / 1e3)));
+        out.push(format!("  escape velocity   = {} km/s", sci(e.v_escape / 1e3)));
+        out.push(format!("  specific energy ε = {} J/kg", sci(e.specific_energy)));
+        out.push(String::new());
+        out.push(format!("Status: {}", e.status()));
+    }
+    out
+}
+
 /// Collision trace: masses, relative velocity, and the momentum-conserving
 /// merge result.
 pub fn collision_lines(c: &crate::sim::Collision) -> Vec<String> {
