@@ -143,6 +143,9 @@ pub fn details_lines(world: &World, i: usize) -> Vec<String> {
         out.push(format!("orbits {}:", att.name));
         if e.semi_major_axis.is_finite() && e.semi_major_axis > 0.0 {
             out.push(format!("  a = {} km ({} AU)", sci(e.semi_major_axis / 1e3), fmt(e.semi_major_axis / AU)));
+            let q = e.semi_major_axis * (1.0 - e.eccentricity);
+            let ap = e.semi_major_axis * (1.0 + e.eccentricity);
+            out.push(format!("  peri/apo = {} / {} km", sci(q / 1e3), sci(ap / 1e3)));
         }
         out.push(format!("  e = {:.4}   i = {:.2}°", e.eccentricity, e.inclination.to_degrees()));
         out.push(format!("  |v| = {} km/s", fmt(e.speed / 1e3)));
@@ -169,6 +172,26 @@ fn fmt(x: f64) -> String {
     } else {
         format!("{:.2}", x)
     }
+}
+
+/// Decay trace: fired when a bound orbit's periapsis drops below the
+/// attractor's surface — the body is on an impact trajectory.
+pub fn decay_lines(world: &World, i: usize) -> Vec<String> {
+    let b = &world.bodies[i];
+    let mut out = vec![format!("⚠ Orbital decay: {}", b.name)];
+    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+        let att = &world.bodies[a];
+        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        let q = e.semi_major_axis * (1.0 - e.eccentricity);
+        out.push("  periapsis q = a(1 − e)".into());
+        out.push(format!("    = {} · (1 − {:.3})", sci(e.semi_major_axis), e.eccentricity));
+        out.push(format!("    = {} km", sci(q / 1e3)));
+        out.push(format!("  {} radius = {} km", att.name, sci(att.radius / 1e3)));
+        out.push(format!("  q < R_{} → impact-bound", att.name));
+        out.push(String::new());
+        out.push(format!("Status: decaying orbit — will strike {}", att.name));
+    }
+    out
 }
 
 /// Escape trace: fired when a body crosses onto an unbound trajectory.

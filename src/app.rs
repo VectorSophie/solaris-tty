@@ -59,6 +59,8 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut details: Option<usize> = None;
     // Names of bodies currently on unbound trajectories, to detect new escapes.
     let mut unbound: HashSet<String> = unbound_names(&world);
+    // Names of bodies whose orbit will impact their attractor (decay).
+    let mut decaying: HashSet<String> = decaying_names(&world);
 
     let frame = Duration::from_millis(33);
     loop {
@@ -208,6 +210,15 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 }
             }
             unbound = current;
+            // Decay detection: newly impact-bound orbits.
+            let current_decay = decaying_names(&world);
+            for name in current_decay.difference(&decaying) {
+                if let Some(i) = world.find_body(name) {
+                    status_msg = Some(format!("decay: {name}'s orbit will impact"));
+                    panel_override = Some(trace::decay_lines(&world, i));
+                }
+            }
+            decaying = current_decay;
         }
 
         // Screensaver: slowly orbit the camera around the system, HUD hidden.
@@ -343,6 +354,31 @@ fn unbound_names(world: &World) -> HashSet<String> {
             let e = elements(b, att.pos, att.vel, world.g * att.mass);
             if e.class != Class::Bound {
                 set.insert(b.name.clone());
+            }
+        }
+    }
+    set
+}
+
+/// Names of bound bodies whose periapsis q = a(1−e) has dropped below their
+/// attractor's surface — an impact-bound (decaying) orbit.
+fn decaying_names(world: &World) -> HashSet<String> {
+    use crate::sim::body::Kind;
+    use crate::sim::gravity::dominant_attractor;
+    use crate::sim::orbit::{elements, Class};
+    let mut set = HashSet::new();
+    for (i, b) in world.bodies.iter().enumerate() {
+        if b.kind == Kind::Star {
+            continue;
+        }
+        if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+            let att = &world.bodies[a];
+            let e = elements(b, att.pos, att.vel, world.g * att.mass);
+            if e.class == Class::Bound && e.semi_major_axis > 0.0 {
+                let q = e.semi_major_axis * (1.0 - e.eccentricity);
+                if q < att.radius + b.radius {
+                    set.insert(b.name.clone());
+                }
             }
         }
     }

@@ -117,6 +117,20 @@ fn frame() -> Result<()> {
         }
     }
 
+    // Demo the decay trace: give a body a periapsis inside the Sun.
+    println!("\n── decay trace ──");
+    {
+        use solaris_tty::sim::body::{Body, Kind};
+        let mut grazer = Body::new("Grazer", Kind::Planet, 1.0e22, 5.0e5);
+        // Near 1 AU but aimed almost straight at the Sun (tiny tangential speed).
+        grazer.pos = [1.495978707e11, 0.0, 0.0];
+        grazer.vel = [0.0, 2.0e3, 0.0]; // well below circular ⇒ plunging orbit
+        let gi = world.add_body(grazer);
+        for l in solaris_tty::trace::decay_lines(&world, gi) {
+            println!("  {l}");
+        }
+    }
+
     // Demo the :set edit trace: push Mars past escape velocity.
     println!("\n$ :set Mars vel=0,50km/s,0\n");
     if let Some(mars) = world.find_body("Mars") {
