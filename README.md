@@ -23,7 +23,8 @@ Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate
 - [x] Screensaver mode (auto-orbiting camera)
 - [x] Right-click details card (physical + orbital data), planetary rings, starfield
 - [x] Collisions — momentum-conserving inelastic merge with collision trace
-- [ ] Live editing (`:set mass/vel/...`), escape/decay detection, rewind (roadmap)
+- [x] Live editing (`:set`) with stability classification + escape auto-detection
+- [ ] Orbital decay / instability detectors, rewind, more scenarios (roadmap)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.
@@ -43,7 +44,8 @@ Spawn a body and watch the math, inspect, or switch scale:
 ```
 :spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0
 :inspect Mars
-:scale realistic     # or compressed / educational
+:set Mars vel=0,50km/s,0    # edit the selected/named body; see if it escapes
+:scale realistic           # or compressed / educational
 ```
 
 Launch straight into the screensaver: `solaris-tty --screensaver`
