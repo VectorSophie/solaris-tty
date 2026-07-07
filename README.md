@@ -8,6 +8,18 @@ on screen for every big action.
 
 Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate-tty).
 
+## Demo
+
+A recorded fly-through ships at [`docs/demo-solar.cast`](docs/demo-solar.cast)
+(asciinema v2, 15 s). Play it locally:
+
+```
+asciinema play docs/demo-solar.cast     # or drop the file on asciinema.org
+agg docs/demo-solar.cast solaris.gif     # convert to a GIF
+```
+
+Generate your own from any scenario: `cargo run --release -- --record my.cast 300 scene=trojans`.
+
 ## Status: v0.1 playable
 
 - [x] Physics core — direct N-body gravity, velocity-Verlet (leapfrog), SI f64
