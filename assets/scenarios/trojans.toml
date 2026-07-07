@@ -1,0 +1,103 @@
+name = "Jupiter Trojans (L4 / L5)"
+description = "Sun, Jupiter, and asteroid swarms trapped 60° ahead (L4) and behind (L5) Jupiter. Press 'c' to switch to the co-rotating view — the Trojans freeze at the Lagrange points."
+
+[simulation]
+units = "si"
+time_step = 3600.0
+substeps = 240
+integrator = "leapfrog"
+gravitational_constant = 6.67430e-11
+softening = 1.0e5
+
+[render]
+scale = "compressed"
+trail_length = 1600
+show_labels = true
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "Sun"
+kind = "star"
+mass = 1.98892e30
+radius = 6.9634e8
+distance = 0.0
+orbital_velocity = 0.0
+glyph = "*"
+about = "G2V star"
+
+[[bodies]]
+name = "Jupiter"
+kind = "planet"
+mass = 1.898e27
+radius = 6.9911e7
+distance = 7.783408e11
+eccentricity = 0.0
+inclination = 0.0
+mean_anomaly = 0.0
+glyph = "J"
+about = "The Trojans' shepherd"
+
+# L4 swarm — 60° ahead of Jupiter (same a, e≈0).
+[[bodies]]
+name = "L4-a"
+kind = "debris"
+mass = 1.0e15
+radius = 5.0e4
+distance = 7.783408e11
+eccentricity = 0.0
+mean_anomaly = 55.0
+glyph = "."
+
+[[bodies]]
+name = "L4-b"
+kind = "debris"
+mass = 1.0e15
+radius = 5.0e4
+distance = 7.783408e11
+eccentricity = 0.0
+mean_anomaly = 60.0
+glyph = "."
+
+[[bodies]]
+name = "L4-c"
+kind = "debris"
+mass = 1.0e15
+radius = 5.0e4
+distance = 7.783408e11
+eccentricity = 0.0
+mean_anomaly = 65.0
+glyph = "."
+
+# L5 swarm — 60° behind Jupiter.
+[[bodies]]
+name = "L5-a"
+kind = "debris"
+mass = 1.0e15
+radius = 5.0e4
+distance = 7.783408e11
+eccentricity = 0.0
+mean_anomaly = 295.0
+glyph = "."
+
+[[bodies]]
+name = "L5-b"
+kind = "debris"
+mass = 1.0e15
+radius = 5.0e4
+distance = 7.783408e11
+eccentricity = 0.0
+mean_anomaly = 300.0
+glyph = "."
+
+[[bodies]]
+name = "L5-c"
+kind = "debris"
+mass = 1.0e15
+radius = 5.0e4
+distance = 7.783408e11
+eccentricity = 0.0
+mean_anomaly = 305.0
+glyph = "."

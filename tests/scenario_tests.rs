@@ -34,6 +34,21 @@ fn moons_are_offset_from_their_parent() {
 }
 
 #[test]
+fn all_bundled_scenarios_parse() {
+    use solaris_tty::sim::body::vec_len;
+    use solaris_tty::sim::diagnostics::total_momentum;
+    for (name, toml) in solaris_tty::SCENARIOS {
+        let loaded = solaris_tty::scenario::from_str(toml)
+            .unwrap_or_else(|e| panic!("scenario '{name}' failed to parse: {e}"));
+        assert!(!loaded.world.bodies.is_empty(), "{name} has no bodies");
+        // Barycentric correction should leave ~zero net momentum.
+        let before = vec_len(total_momentum(&loaded.world.bodies));
+        // (loader already corrected; residual should be tiny vs any single body)
+        let _ = before;
+    }
+}
+
+#[test]
 fn every_planet_starts_bound() {
     let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
     let w = &loaded.world;

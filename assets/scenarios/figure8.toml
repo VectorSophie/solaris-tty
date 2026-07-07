@@ -1,0 +1,49 @@
+name = "Figure-8 Choreography"
+description = "The Chenciner–Montgomery three-body choreography: three equal masses chasing each other along a single figure-8 orbit. Classic dimensionless initial conditions, scaled to SI (solar masses at ~1 AU)."
+
+[simulation]
+units = "si"
+time_step = 300.0
+substeps = 60
+integrator = "leapfrog"
+gravitational_constant = 6.67430e-11
+softening = 1.0e6
+
+[render]
+scale = "compressed"
+trail_length = 2000
+show_labels = true
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+# Three equal solar masses. Dimensionless IC (G=m=1) scaled by
+# L = 1 AU and V = sqrt(G·M/L) ≈ 29789 m/s.
+
+[[bodies]]
+name = "Alpha"
+kind = "planet"
+mass = 1.98892e30
+radius = 6.9634e8
+position = [1.45113e11, -3.63659e10, 0.0]
+velocity = [1.38882e4, 1.28797e4, 0.0]
+glyph = "A"
+
+[[bodies]]
+name = "Beta"
+kind = "planet"
+mass = 1.98892e30
+radius = 6.9634e8
+position = [0.0, 0.0, 0.0]
+velocity = [-2.77758e4, -2.57595e4, 0.0]
+glyph = "B"
+
+[[bodies]]
+name = "Gamma"
+kind = "planet"
+mass = 1.98892e30
+radius = 6.9634e8
+position = [-1.45113e11, 3.63659e10, 0.0]
+velocity = [1.38882e4, 1.28797e4, 0.0]
+glyph = "C"

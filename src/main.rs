@@ -23,8 +23,17 @@ fn main() -> Result<()> {
         return frame();
     }
 
-    // Default: interactive TUI. `run <scenario>` accepted; only "solar" exists.
-    let loaded = solaris_tty::scenario::from_str(SOLAR_TOML)?;
+    // Default: interactive TUI. `run <scenario>` selects a bundled scenario.
+    let name = if flags.get(1) == Some(&"run") {
+        flags.get(2).copied().unwrap_or("solar")
+    } else {
+        "solar"
+    };
+    let toml = solaris_tty::scenario_toml(name).ok_or_else(|| {
+        let names: Vec<&str> = solaris_tty::SCENARIOS.iter().map(|(n, _)| *n).collect();
+        anyhow::anyhow!("unknown scenario '{name}'. available: {}", names.join(", "))
+    })?;
+    let loaded = solaris_tty::scenario::from_str(toml)?;
     let screensaver = flags.contains(&"--screensaver");
     solaris_tty::app::run(loaded, screensaver)
 }
@@ -65,7 +74,10 @@ fn frame() -> Result<()> {
     let mode = std::env::args()
         .find_map(|a| ScaleMode::from_name(&a))
         .unwrap_or(ScaleMode::Compressed);
-    let loaded = solaris_tty::scenario::from_str(SOLAR_TOML)?;
+    let scene = std::env::args()
+        .find_map(|a| a.strip_prefix("scene=").and_then(solaris_tty::scenario_toml))
+        .unwrap_or(SOLAR_TOML);
+    let loaded = solaris_tty::scenario::from_str(scene)?;
     let mut world = loaded.world;
     // Build up some trail history.
     for _ in 0..220 {

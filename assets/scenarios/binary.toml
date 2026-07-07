@@ -1,0 +1,51 @@
+name = "Binary Star + Circumbinary Planet"
+description = "Two equal-mass suns in a 2 AU circular binary, with a Tatooine-style planet orbiting the pair at 5 AU."
+
+[simulation]
+units = "si"
+time_step = 600.0
+substeps = 120
+integrator = "leapfrog"
+gravitational_constant = 6.67430e-11
+softening = 1.0e6
+
+[render]
+scale = "compressed"
+trail_length = 2400
+show_labels = true
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+# Two suns at ±1 AU, each orbiting the barycentre at v = sqrt(G·m / 2d),
+# d = 2 AU separation ⇒ ~14.9 km/s.
+
+[[bodies]]
+name = "Sun A"
+kind = "star"
+mass = 1.98892e30
+radius = 6.9634e8
+position = [1.495978707e11, 0.0, 0.0]
+velocity = [0.0, 14896.0, 0.0]
+glyph = "*"
+
+[[bodies]]
+name = "Sun B"
+kind = "star"
+mass = 1.98892e30
+radius = 6.9634e8
+position = [-1.495978707e11, 0.0, 0.0]
+velocity = [0.0, -14896.0, 0.0]
+glyph = "*"
+
+# Circumbinary planet at 5 AU; v ≈ sqrt(G·M_total / r) ≈ 18.8 km/s.
+[[bodies]]
+name = "Tatoo"
+kind = "planet"
+mass = 5.9722e24
+radius = 6.371e6
+position = [7.479893535e11, 0.0, 0.0]
+velocity = [0.0, 18841.0, 0.0]
+glyph = "@"
+about = "Circumbinary planet with two suns in its sky"

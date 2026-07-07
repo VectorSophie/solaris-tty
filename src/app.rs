@@ -37,10 +37,19 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
 
     let (mut tw, mut th) = terminal::size();
     let mut fb = FrameBuffer::new(tw, th);
-    let mut cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
+
+    let mut scale_mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
+    // Frame the camera to the system's on-screen extent so compact scenarios
+    // (figure-8, binary) aren't tiny specks and big ones aren't off-screen.
+    let extent = world
+        .bodies
+        .iter()
+        .map(|b| render::scale::world_to_render(scale_mode, b.pos).length())
+        .fold(0.0f32, f32::max)
+        .max(2.0);
+    let mut cam = Camera::looking_at_origin(Vec3::new(0.0, extent * 1.7, extent * 1.2));
 
     let stars = render::starfield::generate(500);
-    let mut scale_mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
     let mut representation = Representation::Heliocentric;
     let mut screensaver = screensaver_start;
     let mut saver_angle: f32 = 0.0;
