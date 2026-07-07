@@ -204,6 +204,38 @@ impl FrameBuffer {
         self.previous.copy_from_slice(&self.current);
     }
 
+    /// Serialize the full frame as an ANSI string (absolute cursor moves + 24-bit
+    /// colour), suitable for an asciinema cast. Full-frame, not a dirty diff.
+    pub fn to_ansi(&self) -> String {
+        let mut s = String::from("\u{1b}[H");
+        for y in 0..self.height {
+            s.push_str(&format!("\u{1b}[{};1H\u{1b}[0m", y + 1));
+            let (mut last_fg, mut last_bg) = (None, None);
+            for x in 0..self.width {
+                let c = &self.current[self.idx(x, y)];
+                let fg = color_rgb(c.fg);
+                let bg = color_rgb(c.bg);
+                if fg != last_fg {
+                    match fg {
+                        Some((r, g, b)) => s.push_str(&format!("\u{1b}[38;2;{r};{g};{b}m")),
+                        None => s.push_str("\u{1b}[39m"),
+                    }
+                    last_fg = fg;
+                }
+                if bg != last_bg {
+                    match bg {
+                        Some((r, g, b)) => s.push_str(&format!("\u{1b}[48;2;{r};{g};{b}m")),
+                        None => s.push_str("\u{1b}[49m"),
+                    }
+                    last_bg = bg;
+                }
+                s.push(c.ch);
+            }
+        }
+        s.push_str("\u{1b}[0m");
+        s
+    }
+
     /// Dump the current cells as a plain-text grid (chars only, no color).
     /// For headless verification without a real terminal.
     pub fn to_text(&self) -> String {
@@ -215,6 +247,20 @@ impl FrameBuffer {
             s.push('\n');
         }
         s
+    }
+}
+
+/// Map a crossterm colour to 24-bit RGB, or None for the terminal default.
+fn color_rgb(c: Color) -> Option<(u8, u8, u8)> {
+    match c {
+        Color::Rgb { r, g, b } => Some((r, g, b)),
+        Color::Reset => None,
+        Color::Black => Some((0, 0, 0)),
+        Color::White => Some((235, 235, 235)),
+        Color::Grey => Some((150, 150, 150)),
+        Color::DarkGrey => Some((80, 80, 80)),
+        Color::Yellow => Some((230, 210, 90)),
+        _ => Some((200, 200, 200)),
     }
 }
 

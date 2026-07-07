@@ -22,6 +22,10 @@ fn main() -> Result<()> {
     if flags.contains(&"--frame") {
         return frame();
     }
+    if let Some(pos) = flags.iter().position(|f| *f == "--record") {
+        let path = flags.get(pos + 1).copied().unwrap_or("solaris.cast");
+        return record(path);
+    }
 
     // Default: interactive TUI. `run <scenario>` selects a bundled scenario.
     let name = if flags.get(1) == Some(&"run") {
@@ -63,6 +67,86 @@ fn check() -> Result<()> {
     }
     println!("1-year energy drift = {:+.6}%", world.energy_drift_pct());
     Ok(())
+}
+
+/// Record an asciinema v2 `.cast` file by rendering frames to full-screen ANSI
+/// — no live terminal needed. Args: `--record <file> [frames] [scene=<name>]`.
+fn record(path: &str) -> Result<()> {
+    use glam::Vec3;
+    use solaris_tty::render::scale::{world_to_render, ScaleMode};
+    use solaris_tty::render::scene::Representation;
+    use solaris_tty::render::{camera::Camera, scene, starfield, FrameBuffer};
+
+    let args: Vec<String> = std::env::args().collect();
+    let frames = args.iter().filter_map(|a| a.parse::<usize>().ok()).next().unwrap_or(300).clamp(1, 1200);
+    let name = args
+        .iter()
+        .find_map(|a| a.strip_prefix("scene=").map(String::from))
+        .unwrap_or_else(|| "solar".into());
+    let toml = solaris_tty::scenario_toml(&name).unwrap_or(SOLAR_TOML);
+
+    let (w, h) = (100u16, 38u16);
+    let loaded = solaris_tty::scenario::from_str(toml)?;
+    let mut world = loaded.world;
+    let mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
+    let extent = world
+        .bodies
+        .iter()
+        .map(|b| world_to_render(mode, b.pos).length())
+        .fold(0.0f32, f32::max)
+        .max(2.0);
+    let stars = starfield::generate(500);
+    let mut fb = FrameBuffer::new(w, h);
+
+    let mut out = format!(
+        "{{\"version\":2,\"width\":{w},\"height\":{h},\"env\":{{\"TERM\":\"xterm-256color\"}}}}\n"
+    );
+    out.push_str(&format!("[0.0, \"o\", \"{}\"]\n", json_escape("\u{1b}[2J\u{1b}[?25l")));
+
+    let dt = 0.05;
+    let focus = world.find_body("Earth").unwrap_or(1);
+    for i in 0..frames {
+        let ang = i as f32 * 0.012;
+        let cam = Camera::looking_at(
+            Vec3::new(extent * 1.5 * ang.cos(), extent * 1.0, extent * 1.5 * ang.sin()),
+            Vec3::ZERO,
+        );
+        world.substeps = 240;
+        world.advance();
+        world.record_trails(1000);
+
+        fb.clear();
+        scene::render(&mut fb, &cam, &world, focus, &stars, mode, Representation::Heliocentric, world.time);
+        fb.composite_pixels();
+        fb.composite_braille();
+        let caption = format!(" solaris-tty · {name} · t={:.0}d ", world.time / 86400.0);
+        fb.write_str(0, h - 1, &caption, crossterm::style::Color::White, crossterm::style::Color::DarkGrey);
+
+        let t = i as f64 * dt;
+        out.push_str(&format!("[{t:.2}, \"o\", \"{}\"]\n", json_escape(&fb.to_ansi())));
+    }
+    std::fs::write(path, &out)?;
+    println!("wrote {frames} frames ({name}) to {path}");
+    println!("play:  asciinema play {path}");
+    println!("gif:   agg {path} solaris.gif");
+    Ok(())
+}
+
+/// Minimal JSON string escaping (control chars → \\uXXXX; raw UTF-8 kept).
+fn json_escape(s: &str) -> String {
+    let mut o = String::with_capacity(s.len() + 16);
+    for c in s.chars() {
+        match c {
+            '"' => o.push_str("\\\""),
+            '\\' => o.push_str("\\\\"),
+            '\n' => o.push_str("\\n"),
+            '\r' => o.push_str("\\r"),
+            '\t' => o.push_str("\\t"),
+            c if (c as u32) < 0x20 => o.push_str(&format!("\\u{:04x}", c as u32)),
+            c => o.push(c),
+        }
+    }
+    o
 }
 
 /// Render a single frame to a plain-text grid on stdout (headless check).

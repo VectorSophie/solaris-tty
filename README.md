@@ -26,7 +26,7 @@ Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate
 - [x] Live editing (`:set`) with stability classification + escape auto-detection
 - [x] Representations (`c`): heliocentric · top-down · geocentric · co-rotating · helical
 - [x] Orbital-decay / impact detection (auto-fires a trace)
-- [ ] Rewind, more scenarios (binary star, 3-body chaos), asciinema demo (roadmap)
+- [x] Rewind (scrub time), more scenarios (binary, figure-8, Trojans), asciinema recorder
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.
@@ -35,6 +35,7 @@ for the full design and the verified physical dataset.
 
 ```
 solaris-tty                # or: cargo run --release
+solaris-tty run trojans    # bundled scenarios: solar, binary, figure8, trojans
 ```
 
 Controls: **WASD/R/F** fly · **arrows** look · **right-click** a body for its details
@@ -58,14 +59,22 @@ Spawn a body and watch the math, inspect, or switch scale:
 
 Launch straight into the screensaver: `solaris-tty --screensaver`
 
+Time controls: **Space** pause · **,** rewind · **.** step/replay forward. Resuming
+after a rewind branches the timeline.
+
 Other modes:
 
 ```
-cargo run -- --check       # headless load + orbit classification + energy check
-cargo run -- --frame       # render one frame to a plain-text grid
-cargo run --release -- --bench   # N-body throughput benchmark
-cargo test                 # physics + scenario checks
+cargo run -- --check              # headless load + orbit classification + energy check
+cargo run -- --frame [mode]       # render one frame to a plain-text grid
+cargo run --release -- --bench    # N-body throughput benchmark
+cargo run --release -- --record demo.cast 300 scene=trojans   # asciinema v2 cast
+cargo test                        # physics + scenario checks
 ```
+
+The recorder writes a standard [asciinema](https://asciinema.org) `.cast` (no live
+terminal needed). Play with `asciinema play demo.cast`, or make a GIF with
+[`agg`](https://github.com/asciinema/agg): `agg demo.cast solaris.gif`.
 
 ## License
 
