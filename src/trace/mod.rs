@@ -171,6 +171,24 @@ fn fmt(x: f64) -> String {
     }
 }
 
+/// Collision trace: masses, relative velocity, and the momentum-conserving
+/// merge result.
+pub fn collision_lines(c: &crate::sim::Collision) -> Vec<String> {
+    vec![
+        format!("✦ Collision: {} + {}", c.survivor_name, c.other_name),
+        format!("  m₁ = {} kg", sci(c.m_survivor)),
+        format!("  m₂ = {} kg", sci(c.m_other)),
+        format!("  v_rel = |v₁ − v₂| = {} km/s", sci(c.v_rel / 1e3)),
+        String::new(),
+        format!("Merged body: {}", c.survivor_name),
+        "  m = m₁ + m₂".into(),
+        format!("    = {} kg", sci(c.merged_mass)),
+        "  v = (m₁v₁ + m₂v₂)/(m₁+m₂)".into(),
+        format!("    |v| = {} km/s", sci(c.merged_speed / 1e3)),
+        "  (momentum conserved)".into(),
+    ]
+}
+
 /// Debug diagnostics for the developer mode.
 pub fn debug_lines(world: &World, steps_per_frame: u32) -> Vec<String> {
     vec![

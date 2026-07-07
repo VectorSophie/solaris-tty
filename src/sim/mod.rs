@@ -10,4 +10,4 @@ pub mod units;
 pub mod world;
 
 pub use body::{Body, Kind};
-pub use world::World;
+pub use world::{Collision, World};

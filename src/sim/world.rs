@@ -1,9 +1,24 @@
 //! The simulation world: owns bodies and steps them forward.
 
-use super::body::Body;
+use super::body::{vec_len, vec_sub, Body};
 use super::diagnostics;
 use super::gravity::accelerations;
 use super::integrator::leapfrog_step;
+
+/// Record of a resolved collision, for the trace panel.
+pub struct Collision {
+    pub survivor_name: String,
+    pub other_name: String,
+    pub m_survivor: f64,
+    pub m_other: f64,
+    pub v_rel: f64,
+    pub merged_mass: f64,
+    pub merged_speed: f64,
+    /// Index of the surviving body after the removal.
+    pub survivor: usize,
+    /// Index that was removed from the bodies vec.
+    pub removed: usize,
+}
 
 pub struct World {
     pub bodies: Vec<Body>,
@@ -85,6 +100,75 @@ impl World {
 
     pub fn find_body(&self, name: &str) -> Option<usize> {
         self.bodies.iter().position(|b| b.name == name)
+    }
+
+    /// Find the first overlapping pair (real radii touch) and merge it into a
+    /// single body via a momentum-conserving perfectly-inelastic collision.
+    /// Returns a record of the event, or None if nothing collided. Call in a
+    /// loop to resolve all collisions in a frame.
+    pub fn resolve_one_collision(&mut self) -> Option<Collision> {
+        let n = self.bodies.len();
+        for i in 0..n {
+            for j in (i + 1)..n {
+                let d = vec_len(vec_sub(self.bodies[i].pos, self.bodies[j].pos));
+                if d < self.bodies[i].radius + self.bodies[j].radius {
+                    return Some(self.merge(i, j));
+                }
+            }
+        }
+        None
+    }
+
+    /// Merge bodies `i` and `j`; the more massive keeps its identity. Removes
+    /// the other, recomputes cached state, and returns the collision record.
+    fn merge(&mut self, i: usize, j: usize) -> Collision {
+        let (keep, drop) = if self.bodies[i].mass >= self.bodies[j].mass {
+            (i, j)
+        } else {
+            (j, i)
+        };
+        let a = self.bodies[keep].clone();
+        let b = self.bodies[drop].clone();
+        let m = a.mass + b.mass;
+        let v_rel = vec_len(vec_sub(a.vel, b.vel));
+        let com = |ax: [f64; 3], bx: [f64; 3]| {
+            [
+                (a.mass * ax[0] + b.mass * bx[0]) / m,
+                (a.mass * ax[1] + b.mass * bx[1]) / m,
+                (a.mass * ax[2] + b.mass * bx[2]) / m,
+            ]
+        };
+        let vel = com(a.vel, b.vel);
+        let pos = com(a.pos, b.pos);
+        // Volume-preserving radius keeps density sensible.
+        let radius = (a.radius.powi(3) + b.radius.powi(3)).cbrt();
+
+        {
+            let survivor = &mut self.bodies[keep];
+            survivor.mass = m;
+            survivor.pos = pos;
+            survivor.vel = vel;
+            survivor.radius = radius;
+            survivor.trail.clear();
+        }
+        self.bodies.remove(drop);
+
+        // Recompute cached acceleration (length must track body count).
+        self.acc = accelerations(&self.bodies, self.g, self.softening);
+        self.energy_ref = self.total_energy();
+
+        let survivor_idx = if drop < keep { keep - 1 } else { keep };
+        Collision {
+            survivor_name: a.name,
+            other_name: b.name,
+            m_survivor: a.mass,
+            m_other: b.mass,
+            v_rel,
+            merged_mass: m,
+            merged_speed: vec_len(vel),
+            survivor: survivor_idx,
+            removed: drop,
+        }
     }
 
     /// Add a body at runtime, recomputing cached acceleration (its length must

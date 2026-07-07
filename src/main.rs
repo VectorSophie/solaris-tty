@@ -105,6 +105,21 @@ fn frame() -> Result<()> {
         }
     }
 
+    // Demo a collision trace headlessly: drop an impactor onto Earth.
+    println!("\n── collision trace ──");
+    if let Some(ei) = world.find_body("Earth") {
+        use solaris_tty::sim::body::{Body, Kind};
+        let mut impactor = Body::new("Impactor", Kind::Planet, 3.0e23, 2.0e6);
+        impactor.pos = world.bodies[ei].pos;
+        impactor.vel = [world.bodies[ei].vel[0] + 1.5e4, world.bodies[ei].vel[1], world.bodies[ei].vel[2]];
+        world.add_body(impactor);
+        if let Some(c) = world.resolve_one_collision() {
+            for l in solaris_tty::trace::collision_lines(&c) {
+                println!("  {l}");
+            }
+        }
+    }
+
     // Demo the spawn trace (the signature feature) headlessly.
     println!("\n$ :spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0\n");
     match solaris_tty::command::execute(

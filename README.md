@@ -22,7 +22,8 @@ Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate
 - [x] Scale modes: compressed / realistic / educational
 - [x] Screensaver mode (auto-orbiting camera)
 - [x] Right-click details card (physical + orbital data), planetary rings, starfield
-- [ ] Live editing (`:set mass/vel/...`), collisions, escape/decay detection, rewind (roadmap)
+- [x] Collisions — momentum-conserving inelastic merge with collision trace
+- [ ] Live editing (`:set mass/vel/...`), escape/decay detection, rewind (roadmap)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.

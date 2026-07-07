@@ -89,6 +89,29 @@ fn kepler_circular_orbit_matches_vis_viva() {
 }
 
 #[test]
+fn collision_merges_and_conserves_momentum() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::diagnostics::total_momentum;
+    let a = Body::new("A", Kind::Planet, 1.0e24, 1.0e6);
+    let mut b = Body::new("B", Kind::Planet, 5.0e23, 1.0e6);
+    b.pos = [5.0e5, 0.0, 0.0]; // separation < r_a + r_b ⇒ overlap
+    b.vel = [1000.0, 0.0, 0.0];
+    let mut w = World::new(vec![a, b], G, 300.0, 1, 1e3);
+    let p_before = total_momentum(&w.bodies);
+
+    let c = w.resolve_one_collision().expect("should collide");
+    assert_eq!(w.bodies.len(), 1, "two bodies merge into one");
+    assert!((c.merged_mass - 1.5e24).abs() < 1e18);
+    // Momentum conserved through the merge.
+    let p_after = total_momentum(&w.bodies);
+    for k in 0..3 {
+        assert!((p_after[k] - p_before[k]).abs() < 1e15, "momentum axis {k}");
+    }
+    // Merged speed = |Σmv|/Σm = 5e26 / 1.5e24 ≈ 333.3 m/s.
+    assert!((c.merged_speed - 333.33).abs() < 1.0, "v = {}", c.merged_speed);
+}
+
+#[test]
 fn fast_body_is_hyperbolic() {
     // 1.5 × circular speed exceeds escape (√2 ≈ 1.414 × circular).
     let world = sun_and_body(1.0, 1.5);

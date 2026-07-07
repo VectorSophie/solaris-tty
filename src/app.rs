@@ -182,6 +182,15 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
             world.substeps = steps_per_frame;
             world.advance();
             world.record_trails(trail_len);
+            // Resolve any collisions this frame; keep selection/details valid.
+            while let Some(c) = world.resolve_one_collision() {
+                adjust_index(&mut selected, c.removed, c.survivor);
+                if let Some(d) = details.as_mut() {
+                    adjust_index(d, c.removed, c.survivor);
+                }
+                status_msg = Some(format!("collision: {} + {}", c.survivor_name, c.other_name));
+                panel_override = Some(trace::collision_lines(&c));
+            }
         }
 
         // Screensaver: slowly orbit the camera around the system, HUD hidden.
@@ -293,6 +302,16 @@ fn draw_hud(
     };
     let fg = if command.is_some() { Color::Yellow } else { Color::White };
     fb.write_str(0, h - 1, &bar, fg, Color::DarkGrey);
+}
+
+/// Shift a stored body index after a collision removed `removed` and left the
+/// survivor at `survivor`.
+fn adjust_index(idx: &mut usize, removed: usize, survivor: usize) {
+    if *idx == removed {
+        *idx = survivor;
+    } else if *idx > removed {
+        *idx -= 1;
+    }
 }
 
 /// Bordered details card anchored bottom-right (right-click inspection).
