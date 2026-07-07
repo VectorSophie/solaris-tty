@@ -25,7 +25,8 @@ Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate
 - [x] Collisions — momentum-conserving inelastic merge with collision trace
 - [x] Live editing (`:set`) with stability classification + escape auto-detection
 - [x] Representations (`c`): heliocentric · top-down · geocentric · co-rotating · helical
-- [ ] Orbital decay / instability detectors, rewind, more scenarios (roadmap)
+- [x] Orbital-decay / impact detection (auto-fires a trace)
+- [ ] Rewind, more scenarios (binary star, 3-body chaos), asciinema demo (roadmap)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.
