@@ -24,6 +24,7 @@ Spiritual successor to [checkmate-tty](https://github.com/VectorSophie/checkmate
 - [x] Right-click details card (physical + orbital data), planetary rings, starfield
 - [x] Collisions — momentum-conserving inelastic merge with collision trace
 - [x] Live editing (`:set`) with stability classification + escape auto-detection
+- [x] Representations (`c`): heliocentric · top-down · geocentric · co-rotating · helical
 - [ ] Orbital decay / instability detectors, rewind, more scenarios (roadmap)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
@@ -37,7 +38,13 @@ solaris-tty                # or: cargo run --release
 
 Controls: **WASD/R/F** fly · **arrows** look · **right-click** a body for its details
 card · **Tab** select · **[ ]** speed · **Space** pause · **.** step ·
-**v** cycle scale mode · **z** screensaver · **m** trace mode · **:** command · **q** quit.
+**v** cycle scale mode · **c** cycle representation (frame) · **z** screensaver · **m** trace mode ·
+**:** command · **q** quit.
+
+**Representations** (`c`): heliocentric (default) · top-down ecliptic map · geocentric
+(Earth-centered, shows retrograde epicycles) · co-rotating/synodic (freezes the selected
+body — reveals resonances & Lagrange points) · helical (Sun drifts, planets corkscrew —
+the *correct* helix, not the debunked "vortex").
 
 Spawn a body and watch the math, inspect, or switch scale:
 

@@ -85,6 +85,16 @@ fn frame() -> Result<()> {
     };
     let stars = solaris_tty::render::starfield::generate(500);
     fb.clear();
+    // Optional representation via arg name.
+    let rep = std::env::args()
+        .find_map(|a| match a.as_str() {
+            "geocentric" => Some(scene::Representation::Geocentric),
+            "helical" => Some(scene::Representation::Helical),
+            "synodic" | "co-rotating" => Some(scene::Representation::Synodic),
+            "topdown" | "top-down" => Some(scene::Representation::TopDown),
+            _ => None,
+        })
+        .unwrap_or(scene::Representation::Heliocentric);
     scene::render(
         &mut fb,
         &cam,
@@ -92,6 +102,8 @@ fn frame() -> Result<()> {
         world.find_body("Earth").unwrap_or(1),
         &stars,
         mode,
+        rep,
+        world.time,
     );
     fb.composite_pixels();
     fb.composite_braille();

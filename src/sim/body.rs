@@ -23,8 +23,9 @@ pub struct Body {
     pub pos: [f64; 3],   // m
     pub vel: [f64; 3],   // m/s
     pub glyph: char,
-    /// Past positions for the render trail (most recent at the back).
-    pub trail: VecDeque<[f64; 3]>,
+    /// Past (position, sim-time) samples for the render trail (newest at back).
+    /// The timestamp lets the helical representation offset older points.
+    pub trail: VecDeque<([f64; 3], f64)>,
     /// Descriptive metadata for the details card (no effect on physics).
     pub axial_tilt: Option<f64>,
     pub rotation_hours: Option<f64>,
@@ -62,12 +63,12 @@ impl Body {
         vec_len(self.vel)
     }
 
-    /// Record the current position onto the trail, capping its length.
-    pub fn push_trail(&mut self, max_len: usize) {
+    /// Record the current position (with sim time) onto the trail, capping length.
+    pub fn push_trail(&mut self, max_len: usize, time: f64) {
         if max_len == 0 {
             return;
         }
-        self.trail.push_back(self.pos);
+        self.trail.push_back((self.pos, time));
         while self.trail.len() > max_len {
             self.trail.pop_front();
         }

@@ -18,6 +18,80 @@ use crate::sim::World;
 const STAR_DEPTH: f32 = 1e-5; // behind everything, but > 0 so it composites
 const STAR_DIST: f32 = 1.0e5; // effectively at infinity
 
+/// Reference frame / framing, orthogonal to `ScaleMode`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Representation {
+    Heliocentric,
+    Geocentric,
+    TopDown,
+    Helical,
+    Synodic,
+}
+
+impl Representation {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Heliocentric => "heliocentric",
+            Self::Geocentric => "geocentric",
+            Self::TopDown => "top-down",
+            Self::Helical => "helical",
+            Self::Synodic => "co-rotating",
+        }
+    }
+    pub fn cycle(self) -> Self {
+        match self {
+            Self::Heliocentric => Self::TopDown,
+            Self::TopDown => Self::Geocentric,
+            Self::Geocentric => Self::Synodic,
+            Self::Synodic => Self::Helical,
+            Self::Helical => Self::Heliocentric,
+        }
+    }
+    pub fn is_topdown(self) -> bool {
+        matches!(self, Self::TopDown)
+    }
+}
+
+// Helical: the whole system drifts in a straight line and planets trace true
+// helices — sometimes ahead of the Sun, sometimes behind (the honest version,
+// not the debunked "vortex" that forces planets to trail a comet-like Sun).
+const HELIX_DIR: Vec3 = Vec3::new(0.0, 0.18, 1.0);
+const HELIX_RATE: f32 = 2.2e-7; // render units per second of sim time
+
+/// Reference body index for representations that re-center or rotate on a body.
+fn reference_index(rep: Representation, world: &World, selected: usize) -> Option<usize> {
+    match rep {
+        Representation::Geocentric => world.find_body("Earth"),
+        Representation::Synodic => match world.bodies.get(selected) {
+            Some(b) if b.kind != Kind::Star => Some(selected),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Apply the representation's world-space transform to a position, given the
+/// reference body's world position at the relevant time (if any).
+fn frame_world(rep: Representation, p: [f64; 3], reference: Option<[f64; 3]>) -> [f64; 3] {
+    match rep {
+        Representation::Geocentric => {
+            let r = reference.unwrap_or([0.0; 3]);
+            [p[0] - r[0], p[1] - r[1], p[2] - r[2]]
+        }
+        Representation::Synodic => match reference {
+            // Rotate about the ecliptic normal so the reference sits at a fixed
+            // angle — freezing it and the Sun to reveal resonances / Lagrange pts.
+            Some(r) => {
+                let a = -(r[1].atan2(r[0]));
+                let (s, c) = a.sin_cos();
+                [p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2]]
+            }
+            None => p,
+        },
+        _ => p,
+    }
+}
+
 /// Project a render-space point to pixel space (W × 2·H). Returns (px, py,
 /// inv_w) or None if behind the camera.
 fn project(mvp: &Mat4, p: Vec3, w: f32, ph: f32) -> Option<(f32, f32, f32)> {
@@ -38,11 +112,25 @@ pub fn render(
     selected: usize,
     stars: &[Star],
     mode: ScaleMode,
+    rep: Representation,
+    now: f64,
 ) {
     let (w, h) = fb.size();
     let (wf, phf) = (w as f32, (h as u16 * 2) as f32);
     let aspect = (w as f32 / h as f32) * 0.5; // pixels are square in this layer
     let mvp = cam.projection(aspect) * cam.view();
+
+    // Representation framing: reference body (if any) and its current position.
+    let ref_idx = reference_index(rep, world, selected);
+    let ref_cur = ref_idx.map(|i| world.bodies[i].pos);
+    let helical = rep == Representation::Helical;
+    // Light source = the Sun's framed render position (origin in most frames).
+    let sun_render = world
+        .bodies
+        .iter()
+        .find(|b| b.kind == Kind::Star)
+        .map(|s| world_to_render(mode, frame_world(rep, s.pos, ref_cur)))
+        .unwrap_or(Vec3::ZERO);
 
     // --- starfield (into the pixel layer, at infinity) ---
     for s in stars {
@@ -62,11 +150,24 @@ pub fn render(
         }
         let col = dim(body_color(&b.name, b.kind));
         let n = b.trail.len();
-        for (i, tp) in b.trail.iter().enumerate() {
+        for (i, (pos, t)) in b.trail.iter().enumerate() {
             if i % 2 == 0 && i < n * 3 / 4 {
                 continue; // taper older points
             }
-            let rp = world_to_render(mode, *tp);
+            // Reference body's position at this same trail time (aligned by age).
+            let ref_at = ref_idx.map(|ri| {
+                let rt = &world.bodies[ri].trail;
+                let back = n - 1 - i;
+                if rt.len() > back {
+                    rt[rt.len() - 1 - back].0
+                } else {
+                    world.bodies[ri].pos
+                }
+            });
+            let mut rp = world_to_render(mode, frame_world(rep, *pos, ref_at));
+            if helical {
+                rp += HELIX_DIR * ((t - now) as f32 * HELIX_RATE);
+            }
             if let Some((px, py, iz)) = project(&mvp, rp, wf, phf) {
                 fb.plot_braille((px * 2.0) as i32, (py * 2.0) as i32, iz, col);
             }
@@ -78,7 +179,7 @@ pub fn render(
         let (Some(ri), Some(ro)) = (b.ring_inner, b.ring_outer) else {
             continue;
         };
-        let center = world_to_render(mode, b.pos);
+        let center = world_to_render(mode, frame_world(rep, b.pos, ref_cur));
         let rr = render_radius(mode, b);
         let tilt = b.axial_tilt.unwrap_or(0.0).to_radians() as f32;
         // Spin axis = Y tilted about X; ring plane basis (u, v) spans it.
@@ -100,7 +201,7 @@ pub fn render(
 
     // --- bodies as shaded half-block spheres ---
     for (bi, b) in world.bodies.iter().enumerate() {
-        let center = world_to_render(mode, b.pos);
+        let center = world_to_render(mode, frame_world(rep, b.pos, ref_cur));
         let (cx, cy, iz) = match project(&mvp, center, wf, phf) {
             Some(v) => v,
             None => continue,
@@ -111,7 +212,7 @@ pub fn render(
 
         let base = body_color(&b.name, b.kind);
         let emissive = b.kind == Kind::Star;
-        let light_world = (-center).normalize_or_zero();
+        let light_world = (sun_render - center).normalize_or_zero();
         let light_view = (cam.view() * Vec4::new(light_world.x, light_world.y, light_world.z, 0.0))
             .truncate()
             .normalize_or_zero();
@@ -155,10 +256,13 @@ pub fn render(
 
 /// Pick the body whose projected centre is nearest a click at cell (`click_x`,
 /// `click_y`), within a small radius. Returns its index.
+#[allow(clippy::too_many_arguments)]
 pub fn pick(
     cam: &Camera,
     world: &World,
     mode: ScaleMode,
+    rep: Representation,
+    selected: usize,
     w: u16,
     h: u16,
     click_x: u16,
@@ -167,9 +271,11 @@ pub fn pick(
     let (wf, phf) = (w as f32, (h * 2) as f32);
     let aspect = (w as f32 / h as f32) * 0.5;
     let mvp = cam.projection(aspect) * cam.view();
+    let ref_cur = reference_index(rep, world, selected).map(|i| world.bodies[i].pos);
     let mut best: Option<(usize, f32)> = None;
     for (i, b) in world.bodies.iter().enumerate() {
-        if let Some((px, py, _)) = project(&mvp, world_to_render(mode, b.pos), wf, phf) {
+        let rp = world_to_render(mode, frame_world(rep, b.pos, ref_cur));
+        if let Some((px, py, _)) = project(&mvp, rp, wf, phf) {
             // Pixel → cell space (cell row = py/2).
             let dx = px - click_x as f32;
             let dy = py / 2.0 - click_y as f32;

@@ -83,10 +83,11 @@ impl World {
         }
     }
 
-    /// Append current positions to every body's trail.
+    /// Append current positions (with sim time) to every body's trail.
     pub fn record_trails(&mut self, max_len: usize) {
+        let t = self.time;
         for b in &mut self.bodies {
-            b.push_trail(max_len);
+            b.push_trail(max_len, t);
         }
     }
 

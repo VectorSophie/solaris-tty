@@ -10,7 +10,7 @@ use glam::Vec3;
 
 use crate::command;
 use crate::render::scale::ScaleMode;
-use crate::render::scene::body_color;
+use crate::render::scene::{body_color, Representation};
 use crate::render::{camera::Camera, cell::Cell, terminal, FrameBuffer};
 use crate::scenario::Loaded;
 use crate::sim::World;
@@ -41,6 +41,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
 
     let stars = render::starfield::generate(500);
     let mut scale_mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
+    let mut representation = Representation::Heliocentric;
     let mut screensaver = screensaver_start;
     let mut saver_angle: f32 = 0.0;
     let mut selected = world.find_body("Earth").unwrap_or(1).min(world.bodies.len() - 1);
@@ -155,6 +156,10 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                             status_msg = Some(format!("scale: {}", scale_mode.name()));
                         }
                         KeyCode::Char('z') => screensaver = !screensaver,
+                        KeyCode::Char('c') => {
+                            representation = representation.cycle();
+                            status_msg = Some(format!("view: {}", representation.name()));
+                        }
                         _ => {}
                     }
                 }
@@ -162,7 +167,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                     if let MouseEventKind::Down(MouseButton::Right) = me.kind {
                         // Right-click: open the details card for the nearest body
                         // (or close it if the click missed everything).
-                        match render::scene::pick(&cam, &world, scale_mode, tw, th, me.column, me.row) {
+                        match render::scene::pick(&cam, &world, scale_mode, representation, selected, tw, th, me.column, me.row) {
                             Some(i) => {
                                 details = Some(i);
                                 selected = i;
@@ -206,6 +211,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
         }
 
         // Screensaver: slowly orbit the camera around the system, HUD hidden.
+        // Top-down representation locks the camera looking down the ecliptic.
         if screensaver {
             saver_angle += 0.004;
             let (r, height) = (24.0, 10.0);
@@ -214,11 +220,13 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 height,
                 r * saver_angle.sin(),
             ));
+        } else if representation.is_topdown() {
+            cam = Camera::looking_at(Vec3::new(0.01, 26.0, 0.0), Vec3::ZERO);
         }
 
         // --- render ---
         fb.clear();
-        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode);
+        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode, representation, world.time);
         fb.composite_pixels();
         fb.composite_braille();
         if !screensaver {
@@ -230,6 +238,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 steps_per_frame,
                 trace_mode,
                 scale_mode,
+                representation,
                 &panel_override,
                 command_buf.as_deref(),
                 status_msg.as_deref(),
@@ -257,6 +266,7 @@ fn draw_hud(
     steps: u32,
     mode: TraceMode,
     scale_mode: ScaleMode,
+    representation: Representation,
     panel_override: &Option<Vec<String>>,
     command: Option<&str>,
     status_msg: Option<&str>,
@@ -304,9 +314,10 @@ fn draw_hud(
     } else {
         let sim_days = world.time / 86400.0;
         format!(
-            " solaris-tty │ {} │ {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · arrows look · Tab select · [ ] speed · Space pause · : cmd · v scale · z saver · m trace · q quit ",
+            " solaris-tty │ {} │ {} · {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · arrows look · Tab select · [ ] speed · Space pause · : cmd · v scale · c view · z saver · m trace · q quit ",
             if paused { "PAUSED" } else { "RUN" },
             scale_mode.name(),
+            representation.name(),
             sim_days,
             steps,
             world.energy_drift_pct(),
