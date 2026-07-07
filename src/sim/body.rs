@@ -53,6 +53,26 @@ impl Body {
         }
     }
 
+    /// Clone the body's physical state without its (heavy) trail — for the
+    /// rewind snapshot buffer.
+    pub fn without_trail(&self) -> Body {
+        Body {
+            name: self.name.clone(),
+            kind: self.kind,
+            mass: self.mass,
+            radius: self.radius,
+            pos: self.pos,
+            vel: self.vel,
+            glyph: self.glyph,
+            trail: VecDeque::new(),
+            axial_tilt: self.axial_tilt,
+            rotation_hours: self.rotation_hours,
+            ring_inner: self.ring_inner,
+            ring_outer: self.ring_outer,
+            about: self.about.clone(),
+        }
+    }
+
     /// Mean density, kg/m^3. Zero radius yields infinity; callers guard.
     pub fn density(&self) -> f64 {
         let vol = 4.0 / 3.0 * std::f64::consts::PI * self.radius.powi(3);

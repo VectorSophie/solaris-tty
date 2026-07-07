@@ -1,6 +1,6 @@
 //! Interactive app loop: load scenario, fly the camera, render, inspect.
 
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
@@ -70,6 +70,10 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut unbound: HashSet<String> = unbound_names(&world);
     // Names of bodies whose orbit will impact their attractor (decay).
     let mut decaying: HashSet<String> = decaying_names(&world);
+    // Rewind: ring buffer of state snapshots; cursor = Some(i) while scrubbing.
+    let mut history: VecDeque<crate::sim::Snapshot> = VecDeque::new();
+    let mut hist_cursor: Option<usize> = None;
+    const HIST_CAP: usize = 1800;
 
     let frame = Duration::from_millis(33);
     loop {
@@ -140,9 +144,51 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                         KeyCode::Right => cam.turn(0.08, 0.0),
                         KeyCode::Up => cam.turn(0.0, 0.08),
                         KeyCode::Down => cam.turn(0.0, -0.08),
-                        KeyCode::Char(' ') => paused = !paused,
-                        KeyCode::Char('.') => {
-                            world.advance(); // single step
+                        KeyCode::Char(' ') => {
+                            paused = !paused;
+                            // Resuming live from a rewound point branches the
+                            // timeline: drop the (now overwritten) future.
+                            if !paused {
+                                if let Some(c) = hist_cursor.take() {
+                                    history.truncate(c + 1);
+                                }
+                            }
+                        }
+                        KeyCode::Char('.') => match hist_cursor {
+                            // Replay forward through buffered history…
+                            Some(c) => {
+                                if c + 2 >= history.len() {
+                                    hist_cursor = None;
+                                    if let Some(s) = history.back() {
+                                        world.restore(s);
+                                    }
+                                } else {
+                                    hist_cursor = Some(c + 1);
+                                    world.restore(&history[c + 1]);
+                                }
+                                let r = after_restore(&world, selected, details);
+                                (selected, details, unbound, decaying) = r;
+                            }
+                            // …or take a single live step at the live edge.
+                            None => {
+                                world.advance();
+                                world.record_trails(trail_len);
+                                history.push_back(world.snapshot());
+                                while history.len() > HIST_CAP {
+                                    history.pop_front();
+                                }
+                            }
+                        },
+                        KeyCode::Char(',') => {
+                            if !history.is_empty() {
+                                paused = true;
+                                let c = hist_cursor.unwrap_or(history.len() - 1);
+                                let nc = c.saturating_sub(1);
+                                hist_cursor = Some(nc);
+                                world.restore(&history[nc]);
+                                let r = after_restore(&world, selected, details);
+                                (selected, details, unbound, decaying) = r;
+                            }
                         }
                         KeyCode::Char(']') => steps_per_frame = (steps_per_frame + steps_per_frame / 2 + 1).min(4000),
                         KeyCode::Char('[') => steps_per_frame = (steps_per_frame * 2 / 3).max(1),
@@ -228,6 +274,11 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 }
             }
             decaying = current_decay;
+            // Record a rewind snapshot at the live edge.
+            history.push_back(world.snapshot());
+            while history.len() > HIST_CAP {
+                history.pop_front();
+            }
         }
 
         // Screensaver: slowly orbit the camera around the system, HUD hidden.
@@ -255,6 +306,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 &world,
                 selected,
                 paused,
+                hist_cursor.is_some(),
                 steps_per_frame,
                 trace_mode,
                 scale_mode,
@@ -283,6 +335,7 @@ fn draw_hud(
     world: &World,
     selected: usize,
     paused: bool,
+    scrubbing: bool,
     steps: u32,
     mode: TraceMode,
     scale_mode: ScaleMode,
@@ -334,8 +387,8 @@ fn draw_hud(
     } else {
         let sim_days = world.time / 86400.0;
         format!(
-            " solaris-tty │ {} │ {} · {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · arrows look · Tab select · [ ] speed · Space pause · : cmd · v scale · c view · z saver · m trace · q quit ",
-            if paused { "PAUSED" } else { "RUN" },
+            " solaris-tty │ {} │ {} · {} │ t={:.0}d │ {}×dt │ drift {:+.4}% │ WASD/RF fly · Tab select · [ ] speed · Space pause · , rewind · . step · : cmd · v scale · c view · q quit ",
+            if scrubbing { "◀ REWIND" } else if paused { "PAUSED" } else { "RUN" },
             scale_mode.name(),
             representation.name(),
             sim_days,
@@ -367,6 +420,20 @@ fn unbound_names(world: &World) -> HashSet<String> {
         }
     }
     set
+}
+
+/// After a rewind restore, clamp selection/details to the (possibly changed)
+/// body count and recompute the escape/decay tracking sets to avoid spurious
+/// re-fires.
+fn after_restore(
+    world: &World,
+    selected: usize,
+    details: Option<usize>,
+) -> (usize, Option<usize>, HashSet<String>, HashSet<String>) {
+    let n = world.bodies.len();
+    let sel = selected.min(n.saturating_sub(1));
+    let det = details.filter(|&d| d < n);
+    (sel, det, unbound_names(world), decaying_names(world))
 }
 
 /// Names of bound bodies whose periapsis q = a(1−e) has dropped below their

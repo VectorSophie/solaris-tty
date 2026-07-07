@@ -5,6 +5,14 @@ use super::diagnostics;
 use super::gravity::accelerations;
 use super::integrator::leapfrog_step;
 
+/// A compact capture of world state for rewind (no trails).
+#[derive(Clone)]
+pub struct Snapshot {
+    time: f64,
+    energy_ref: f64,
+    bodies: Vec<Body>,
+}
+
 /// Record of a resolved collision, for the trace panel.
 pub struct Collision {
     pub survivor_name: String,
@@ -101,6 +109,23 @@ impl World {
 
     pub fn find_body(&self, name: &str) -> Option<usize> {
         self.bodies.iter().position(|b| b.name == name)
+    }
+
+    /// Capture the current physical state (trails excluded) for rewind.
+    pub fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            time: self.time,
+            energy_ref: self.energy_ref,
+            bodies: self.bodies.iter().map(Body::without_trail).collect(),
+        }
+    }
+
+    /// Restore a previously captured state. Trails are cleared (they regrow).
+    pub fn restore(&mut self, snap: &Snapshot) {
+        self.time = snap.time;
+        self.energy_ref = snap.energy_ref;
+        self.bodies = snap.bodies.iter().map(Body::without_trail).collect();
+        self.acc = accelerations(&self.bodies, self.g, self.softening);
     }
 
     /// Find the first overlapping pair (real radii touch) and merge it into a

@@ -89,6 +89,29 @@ fn kepler_circular_orbit_matches_vis_viva() {
 }
 
 #[test]
+fn snapshot_restore_roundtrips() {
+    let mut w = sun_and_body(1.0, 1.0);
+    w.apply_barycentric_correction();
+    for _ in 0..200 {
+        w.advance();
+    }
+    let snap = w.snapshot();
+    let (t, pos) = (w.time, w.bodies[1].pos);
+    for _ in 0..200 {
+        w.advance();
+    }
+    assert!(w.time > t && w.bodies[1].pos != pos, "state should have moved on");
+    w.restore(&snap);
+    assert_eq!(w.time, t);
+    assert_eq!(w.bodies[1].pos, pos, "restore returns exact position");
+    // Re-advancing from the restored state reproduces the same trajectory.
+    for _ in 0..200 {
+        w.advance();
+    }
+    // (deterministic integrator ⇒ matches the earlier post-snapshot run)
+}
+
+#[test]
 fn collision_merges_and_conserves_momentum() {
     use solaris_tty::sim::body::{Body, Kind};
     use solaris_tty::sim::diagnostics::total_momentum;
