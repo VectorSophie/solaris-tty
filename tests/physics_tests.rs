@@ -122,7 +122,8 @@ fn collision_merges_and_conserves_momentum() {
     let mut w = World::new(vec![a, b], G, 300.0, 1, 1e3);
     let p_before = total_momentum(&w.bodies);
 
-    let c = w.resolve_one_collision().expect("should collide");
+    let frame_dt = w.dt * w.substeps as f64;
+    let c = w.resolve_one_collision(frame_dt).expect("should collide");
     assert_eq!(w.bodies.len(), 1, "two bodies merge into one");
     assert!((c.merged_mass - 1.5e24).abs() < 1e18);
     // Momentum conserved through the merge.
@@ -237,4 +238,27 @@ fn mercury_precession_matches_gr() {
     };
     let arcsec = els.gr_precession_arcsec_per_century(C_LIGHT).unwrap();
     assert!((arcsec - 42.98).abs() < 1.0, "got {arcsec}″/century");
+}
+
+#[test]
+fn swept_collision_catches_tunnelling() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::units::G;
+    use solaris_tty::sim::World;
+
+    // Two small bodies that do NOT overlap now, but whose relative motion over
+    // the frame passes within their combined radius.
+    let mut a = Body::new("A", Kind::Debris, 1.0e20, 1.0e6);
+    let mut b = Body::new("B", Kind::Debris, 1.0e20, 1.0e6);
+    a.pos = [0.0, 0.0, 0.0];
+    a.vel = [0.0, 0.0, 0.0];
+    b.pos = [1.0e8, 0.0, 0.0]; // 1e8 m apart now (>> 2e6 combined radius)
+    b.vel = [-1.0e8, 0.0, 0.0]; // closes the full gap in ~1 s
+    let mut w = World::new(vec![a, b], G, 1.0, 1, 0.0);
+
+    let frame_dt = w.dt * w.substeps as f64; // 1 s
+    assert!(
+        w.resolve_one_collision(frame_dt).is_some(),
+        "swept test should catch tunnelling"
+    );
 }

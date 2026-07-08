@@ -250,7 +250,8 @@ fn frame() -> Result<()> {
         impactor.pos = world.bodies[ei].pos;
         impactor.vel = [world.bodies[ei].vel[0] + 1.5e4, world.bodies[ei].vel[1], world.bodies[ei].vel[2]];
         world.add_body(impactor);
-        if let Some(c) = world.resolve_one_collision() {
+        let frame_dt = world.dt * world.substeps as f64;
+        if let Some(c) = world.resolve_one_collision(frame_dt) {
             for l in solaris_tty::trace::collision_lines(&c) {
                 println!("  {l}");
             }

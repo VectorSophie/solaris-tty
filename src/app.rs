@@ -266,7 +266,8 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
             world.advance();
             world.record_trails(trail_len);
             // Resolve any collisions this frame; keep selection/details valid.
-            while let Some(c) = world.resolve_one_collision() {
+            let frame_dt = world.dt * world.substeps as f64;
+            while let Some(c) = world.resolve_one_collision(frame_dt) {
                 adjust_index(&mut selected, c.removed, c.survivor);
                 if let Some(d) = details.as_mut() {
                     adjust_index(d, c.removed, c.survivor);

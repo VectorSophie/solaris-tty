@@ -1,6 +1,6 @@
 //! The simulation world: owns bodies and steps them forward.
 
-use super::body::{vec_len, vec_sub, Body};
+use super::body::{vec_add, vec_dot, vec_len, vec_scale, vec_sub, Body};
 use super::diagnostics;
 use super::gravity::accelerations;
 use super::integrator::leapfrog_step;
@@ -162,16 +162,28 @@ impl World {
         self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
     }
 
-    /// Find the first overlapping pair (real radii touch) and merge it into a
-    /// single body via a momentum-conserving perfectly-inelastic collision.
-    /// Returns a record of the event, or None if nothing collided. Call in a
-    /// loop to resolve all collisions in a frame.
-    pub fn resolve_one_collision(&mut self) -> Option<Collision> {
+    /// Find the first pair whose real radii touch *at any point within the frame*
+    /// and merge it (momentum-conserving inelastic). `frame_dt` is dt·substeps —
+    /// the window over which to sweep, so fast bodies can't tunnel through.
+    /// Returns the collision record, or None. Call in a loop to resolve all.
+    ///
+    // ponytail: swept closest-approach over the whole frame (not per substep).
+    // The frame is the tunnelling window that matters and the merge conserves
+    // momentum, so exact contact time isn't needed.
+    pub fn resolve_one_collision(&mut self, frame_dt: f64) -> Option<Collision> {
         let n = self.bodies.len();
         for i in 0..n {
             for j in (i + 1)..n {
-                let d = vec_len(vec_sub(self.bodies[i].pos, self.bodies[j].pos));
-                if d < self.bodies[i].radius + self.bodies[j].radius {
+                let dp = vec_sub(self.bodies[i].pos, self.bodies[j].pos);
+                let dv = vec_sub(self.bodies[i].vel, self.bodies[j].vel);
+                let vv = vec_dot(dv, dv);
+                let t_star = if vv > 0.0 {
+                    (-vec_dot(dp, dv) / vv).clamp(0.0, frame_dt)
+                } else {
+                    0.0
+                };
+                let closest = vec_len(vec_add(dp, vec_scale(dv, t_star)));
+                if closest < self.bodies[i].radius + self.bodies[j].radius {
                     return Some(self.merge(i, j));
                 }
             }
