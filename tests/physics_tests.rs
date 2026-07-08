@@ -175,3 +175,41 @@ fn gr_term_matches_circular_orbit_ratio() {
     // Source (Sun) gets no GR contribution here.
     assert_eq!(acc[0], [0.0, 0.0, 0.0]);
 }
+
+#[test]
+fn relativity_toggle_changes_trajectory_and_off_is_noop() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::units::{G, M_SUN};
+    use solaris_tty::sim::World;
+
+    let build = || {
+        let r = 5.79e10_f64;
+        let v = (G * M_SUN / r).sqrt();
+        let sun = Body::new("Sun", Kind::Star, M_SUN, 7.0e8);
+        let mut merc = Body::new("Mercury", Kind::Planet, 3.3e23, 2.4e6);
+        merc.pos = [r, 0.0, 0.0];
+        merc.vel = [0.0, v, 0.0];
+        World::new(vec![sun, merc], G, 100.0, 50, 0.0)
+    };
+
+    let mut newt = build();
+    let mut rel = build();
+    rel.set_relativity(true, "Sun".into(), vec![]); // empty targets ⇒ all but source
+
+    for _ in 0..200 {
+        newt.advance();
+        rel.advance();
+    }
+    let dp: f64 = (0..3)
+        .map(|k| (newt.bodies[1].pos[k] - rel.bodies[1].pos[k]).powi(2))
+        .sum::<f64>()
+        .sqrt();
+    assert!(dp > 1.0, "GR should shift Mercury, dp = {dp}");
+
+    let mut off = build();
+    off.set_relativity(false, "Sun".into(), vec![]);
+    for _ in 0..200 {
+        off.advance();
+    }
+    assert_eq!(off.bodies[1].pos, newt.bodies[1].pos);
+}

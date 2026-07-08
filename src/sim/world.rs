@@ -5,6 +5,13 @@ use super::diagnostics;
 use super::gravity::accelerations;
 use super::integrator::leapfrog_step;
 
+/// Resolved GR configuration for one `advance()` call (indices, not names).
+pub struct GrParams {
+    pub source: usize,
+    pub targets: Vec<usize>,
+    pub c: f64,
+}
+
 /// A compact capture of world state for rewind (no trails).
 #[derive(Clone)]
 pub struct Snapshot {
@@ -34,6 +41,9 @@ pub struct World {
     pub dt: f64,          // seconds per step
     pub substeps: u32,    // leapfrog steps per advance()
     pub softening: f64,   // m
+    pub gr_enabled: bool,
+    pub gr_source: String,       // body name; "" when unset
+    pub gr_targets: Vec<String>, // empty ⇒ all bodies except the source
     pub time: f64,        // elapsed sim seconds
     /// Reference energy captured at construction, for drift reporting.
     pub energy_ref: f64,
@@ -51,10 +61,37 @@ impl World {
             dt,
             substeps: substeps.max(1),
             softening,
+            gr_enabled: false,
+            gr_source: String::new(),
+            gr_targets: Vec::new(),
             time: 0.0,
             energy_ref,
             acc,
         }
+    }
+
+    /// Configure the 1PN GR correction. `targets` empty ⇒ all bodies except the
+    /// source. Rebuilds cached forces so the change takes effect immediately.
+    pub fn set_relativity(&mut self, enabled: bool, source: String, targets: Vec<String>) {
+        self.gr_enabled = enabled;
+        self.gr_source = source;
+        self.gr_targets = targets;
+        self.refresh_forces();
+    }
+
+    /// Resolve `gr_*` names to indices for the current body layout, or None when
+    /// disabled / the source is missing.
+    fn gr_params(&self) -> Option<GrParams> {
+        if !self.gr_enabled {
+            return None;
+        }
+        let source = self.find_body(&self.gr_source)?;
+        let targets: Vec<usize> = if self.gr_targets.is_empty() {
+            (0..self.bodies.len()).filter(|&i| i != source).collect()
+        } else {
+            self.gr_targets.iter().filter_map(|n| self.find_body(n)).collect()
+        };
+        Some(GrParams { source, targets, c: crate::sim::units::C_LIGHT })
     }
 
     /// Remove the net drift of the system's centre of mass so the barycentre
@@ -72,20 +109,17 @@ impl World {
                 b.vel[k] -= v_com[k];
             }
         }
-        self.acc = accelerations(&self.bodies, self.g, self.softening);
+        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
         self.energy_ref = diagnostics::total_energy(&self.bodies, self.g);
         v_com
     }
 
     /// Advance one rendered tick: `substeps` leapfrog steps of `dt`.
     pub fn advance(&mut self) {
+        let gr = self.gr_params();
         for _ in 0..self.substeps {
             self.acc = leapfrog_step(
-                &mut self.bodies,
-                &self.acc,
-                self.dt,
-                self.g,
-                self.softening,
+                &mut self.bodies, &self.acc, self.dt, self.g, self.softening, gr.as_ref(),
             );
             self.time += self.dt;
         }
@@ -125,7 +159,7 @@ impl World {
         self.time = snap.time;
         self.energy_ref = snap.energy_ref;
         self.bodies = snap.bodies.iter().map(Body::without_trail).collect();
-        self.acc = accelerations(&self.bodies, self.g, self.softening);
+        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
     }
 
     /// Find the first overlapping pair (real radii touch) and merge it into a
@@ -180,7 +214,7 @@ impl World {
         self.bodies.remove(drop);
 
         // Recompute cached acceleration (length must track body count).
-        self.acc = accelerations(&self.bodies, self.g, self.softening);
+        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
         self.energy_ref = self.total_energy();
 
         let survivor_idx = if drop < keep { keep - 1 } else { keep };
@@ -208,7 +242,7 @@ impl World {
     /// Recompute cached acceleration and re-baseline reference energy after an
     /// in-place edit to a body's mass/position (e.g. via `:set`).
     pub fn refresh_forces(&mut self) {
-        self.acc = accelerations(&self.bodies, self.g, self.softening);
+        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
         self.energy_ref = self.total_energy();
     }
 }
