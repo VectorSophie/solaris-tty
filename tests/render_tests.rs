@@ -56,3 +56,12 @@ fn text_fill_draws_body_name_letters() {
         "expected Sun's letters in text fill"
     );
 }
+
+#[test]
+fn chrome_off_hides_body_labels() {
+    // Blocks fill emits letters only via labels, so the name is a clean probe.
+    let with = render_to_text(Fill::Blocks, true);
+    let without = render_to_text(Fill::Blocks, false);
+    assert!(with.contains("Sun"), "label expected with chrome on");
+    assert!(!without.contains("Sun"), "no labels expected with chrome off");
+}

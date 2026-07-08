@@ -51,6 +51,8 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
 
     let stars = render::starfield::generate(500);
     let mut representation = Representation::Heliocentric;
+    let mut fill = render::scene::Fill::Blocks;
+    let mut show_chrome = true;
     let mut screensaver = screensaver_start;
     let mut saver_angle: f32 = 0.0;
     let mut selected = world.find_body("Earth").unwrap_or(1).min(world.bodies.len() - 1);
@@ -297,10 +299,10 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
 
         // --- render ---
         fb.clear();
-        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode, representation, world.time, render::scene::Fill::Blocks, true);
+        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode, representation, world.time, fill, show_chrome);
         fb.composite_pixels();
         fb.composite_braille();
-        if !screensaver {
+        if !screensaver && show_chrome {
             draw_hud(
                 &mut fb,
                 &world,
