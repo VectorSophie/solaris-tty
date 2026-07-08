@@ -116,7 +116,7 @@ fn record(path: &str) -> Result<()> {
         world.record_trails(1000);
 
         fb.clear();
-        scene::render(&mut fb, &cam, &world, focus, &stars, mode, Representation::Heliocentric, world.time);
+        scene::render(&mut fb, &cam, &world, focus, &stars, mode, Representation::Heliocentric, world.time, scene::Fill::Blocks, true);
         fb.composite_pixels();
         fb.composite_braille();
         let caption = format!(" solaris-tty · {name} · t={:.0}d ", world.time / 86400.0);
@@ -200,6 +200,8 @@ fn frame() -> Result<()> {
         mode,
         rep,
         world.time,
+        scene::Fill::Blocks,
+        true,
     );
     fb.composite_pixels();
     fb.composite_braille();

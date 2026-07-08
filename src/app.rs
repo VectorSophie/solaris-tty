@@ -297,7 +297,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
 
         // --- render ---
         fb.clear();
-        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode, representation, world.time);
+        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode, representation, world.time, render::scene::Fill::Blocks, true);
         fb.composite_pixels();
         fb.composite_braille();
         if !screensaver {

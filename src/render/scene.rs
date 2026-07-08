@@ -147,6 +147,8 @@ pub fn render(
     mode: ScaleMode,
     rep: Representation,
     now: f64,
+    fill: Fill,
+    show_chrome: bool,
 ) {
     let (w, h) = fb.size();
     let (wf, phf) = (w as f32, (h as u16 * 2) as f32);
@@ -234,6 +236,7 @@ pub fn render(
 
     // --- bodies as shaded half-block spheres ---
     for (bi, b) in world.bodies.iter().enumerate() {
+        let _ = fill;
         let center = world_to_render(mode, frame_world(rep, b.pos, ref_cur));
         let (cx, cy, iz) = match project(&mvp, center, wf, phf) {
             Some(v) => v,
@@ -276,7 +279,7 @@ pub fn render(
         }
 
         // Label near the body (skip tiny moons unless selected/educational).
-        if mode.labels_all() || b.kind != Kind::Moon || bi == selected {
+        if show_chrome && (mode.labels_all() || b.kind != Kind::Moon || bi == selected) {
             let lx = (cx + rx + 1.0) as i32;
             let ly = (cy / 2.0) as i32; // pixel row → cell row
             if fb.in_bounds(lx, ly) {
