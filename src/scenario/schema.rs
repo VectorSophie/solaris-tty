@@ -18,6 +18,8 @@ pub struct Scenario {
     #[serde(default)]
     pub trace: Trace,
     #[serde(default)]
+    pub relativity: Relativity,
+    #[serde(default)]
     pub bodies: Vec<BodySpec>,
 }
 
@@ -55,6 +57,18 @@ impl Default for Simulation {
             softening: default_softening(),
         }
     }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct Relativity {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub model: Option<String>, // only "1pn_schwarzschild" accepted; None ⇒ default
+    #[serde(default)]
+    pub source: Option<String>, // None ⇒ most massive body
+    #[serde(default)]
+    pub targets: Vec<String>, // empty ⇒ all but source
 }
 
 #[derive(Debug, Deserialize)]

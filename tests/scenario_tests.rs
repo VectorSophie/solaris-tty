@@ -93,3 +93,53 @@ fn every_planet_starts_bound() {
         }
     }
 }
+
+#[test]
+fn relativity_section_parses_and_defaults_source() {
+    let src = r#"
+name = "t"
+description = "d"
+[simulation]
+[relativity]
+enabled = true
+targets = ["B"]
+[[bodies]]
+name = "S"
+kind = "star"
+mass = 2.0e30
+radius = 7.0e8
+distance = 0.0
+orbital_velocity = 0.0
+[[bodies]]
+name = "B"
+kind = "planet"
+mass = 6.0e24
+radius = 6.4e6
+distance = 5.79e10
+orbital_velocity = 47000.0
+"#;
+    let loaded = solaris_tty::scenario::from_str(src).unwrap();
+    assert!(loaded.world.gr_enabled);
+    // source omitted ⇒ defaults to the most massive body (the star "S").
+    assert_eq!(loaded.world.gr_source, "S");
+    assert_eq!(loaded.world.gr_targets, vec!["B".to_string()]);
+}
+
+#[test]
+fn relativity_rejects_unknown_model() {
+    let src = r#"
+name = "t"
+[simulation]
+[relativity]
+enabled = true
+model = "warp_drive"
+[[bodies]]
+name = "S"
+kind = "star"
+mass = 2.0e30
+radius = 7.0e8
+distance = 0.0
+orbital_velocity = 0.0
+"#;
+    assert!(solaris_tty::scenario::from_str(src).is_err());
+}

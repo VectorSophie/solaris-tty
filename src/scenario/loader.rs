@@ -117,6 +117,26 @@ fn build(scn: Scenario) -> Result<Loaded> {
     );
     let v_com = world.apply_barycentric_correction();
 
+    if scn.relativity.enabled {
+        if let Some(m) = &scn.relativity.model {
+            if m != "1pn_schwarzschild" {
+                return Err(anyhow::anyhow!(
+                    "unknown relativity model '{m}' (only '1pn_schwarzschild')"
+                ));
+            }
+        }
+        let source = match &scn.relativity.source {
+            Some(s) => s.clone(),
+            None => world
+                .bodies
+                .iter()
+                .max_by(|a, b| a.mass.total_cmp(&b.mass))
+                .map(|b| b.name.clone())
+                .unwrap_or_default(),
+        };
+        world.set_relativity(true, source, scn.relativity.targets.clone());
+    }
+
     Ok(Loaded {
         world,
         trail_length: scn.render.trail_length,
