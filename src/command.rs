@@ -43,6 +43,35 @@ fn set<'a>(
     if toks.is_empty() {
         return Err("usage: set [name] key=value ...".into());
     }
+    // `set gr on|off` toggles the world's relativity flag (not a per-body edit).
+    if toks.first().map(|s| s.eq_ignore_ascii_case("gr")).unwrap_or(false) {
+        let state = toks.get(1).copied().unwrap_or("");
+        let enabled = match state {
+            "on" | "true" | "1" => true,
+            "off" | "false" | "0" => false,
+            _ => return Err("usage: set gr on|off".into()),
+        };
+        // Default source to the most massive body if none configured yet.
+        if world.gr_source.is_empty() {
+            if let Some((_, b)) = world
+                .bodies
+                .iter()
+                .enumerate()
+                .max_by(|a, c| a.1.mass.total_cmp(&c.1.mass))
+            {
+                world.gr_source = b.name.clone();
+            }
+        }
+        let source = world.gr_source.clone();
+        let targets = world.gr_targets.clone();
+        world.set_relativity(enabled, source, targets);
+        let panel = if enabled {
+            trace::gr_lines(world, if selected < world.bodies.len() { selected } else { 0 })
+        } else {
+            vec!["Relativity disabled — Newtonian gravity only".into()]
+        };
+        return Ok(Outcome { panel: Some(panel), select: None });
+    }
     // A leading token without '=' names the target; otherwise edit the selection.
     let (target, kv) = if !toks[0].contains('=') {
         let i = world

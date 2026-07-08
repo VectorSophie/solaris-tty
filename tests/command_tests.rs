@@ -70,3 +70,13 @@ fn set_without_name_edits_selection() {
     execute(&mut w, earth, "set mass=1e25").expect("set ok");
     assert!((w.bodies[earth].mass - 1e25).abs() < 1e18);
 }
+
+#[test]
+fn set_gr_toggles_relativity() {
+    let mut w = world();
+    let on = execute(&mut w, 0, "set gr on").expect("gr on ok");
+    assert!(w.gr_enabled);
+    assert!(on.panel.map(|p| !p.is_empty()).unwrap_or(false));
+    execute(&mut w, 0, "set gr off").expect("gr off ok");
+    assert!(!w.gr_enabled);
+}
