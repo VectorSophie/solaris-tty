@@ -142,3 +142,36 @@ fn fast_body_is_hyperbolic() {
     assert_eq!(e.class, Class::Hyperbolic);
     assert!(e.specific_energy > 0.0);
 }
+
+#[test]
+fn gr_term_matches_circular_orbit_ratio() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::gravity::{accelerations, add_gr_accelerations};
+    use solaris_tty::sim::units::{C_LIGHT, G, M_SUN};
+
+    // Sun at origin, one body on a circular orbit at Mercury's distance.
+    let r = 5.79e10_f64;
+    let mu = G * M_SUN;
+    let v = (mu / r).sqrt();
+    let mut sun = Body::new("Sun", Kind::Star, M_SUN, 7.0e8);
+    let mut merc = Body::new("M", Kind::Planet, 3.3e23, 2.4e6);
+    sun.pos = [0.0, 0.0, 0.0];
+    sun.vel = [0.0, 0.0, 0.0];
+    merc.pos = [r, 0.0, 0.0];
+    merc.vel = [0.0, v, 0.0]; // circular ⇒ r·v = 0
+    let bodies = vec![sun, merc];
+
+    let newt = accelerations(&bodies, G, 0.0);
+    let a_newt = (newt[1][0].powi(2) + newt[1][1].powi(2) + newt[1][2].powi(2)).sqrt();
+
+    let mut acc = vec![[0.0; 3]; 2];
+    add_gr_accelerations(&mut acc, &bodies, G, C_LIGHT, 0, &[1]);
+    let a_gr = (acc[1][0].powi(2) + acc[1][1].powi(2) + acc[1][2].powi(2)).sqrt();
+
+    // For a circular orbit the tangential term vanishes and |a_GR|/|a_N| = 3GM/(c²r).
+    let expected = 3.0 * mu / (C_LIGHT * C_LIGHT * r);
+    let ratio = a_gr / a_newt;
+    assert!((ratio - expected).abs() / expected < 1e-6, "ratio {ratio:e} vs {expected:e}");
+    // Source (Sun) gets no GR contribution here.
+    assert_eq!(acc[0], [0.0, 0.0, 0.0]);
+}

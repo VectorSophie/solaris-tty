@@ -36,6 +36,53 @@ pub fn accelerations(bodies: &[Body], g: f64, softening: f64) -> Vec<[f64; 3]> {
     acc
 }
 
+/// Add the first-order post-Newtonian (Schwarzschild) correction from body
+/// `source` onto each `target`'s acceleration, in place. This is the restricted
+/// 1PN term (source recoil omitted — O(m_target/M)); it reproduces Mercury's
+/// ~42.98″/century perihelion advance.
+///
+///   a_GR = (GM/c²r³)·[ (4GM/r − v²)·r_vec + 4(r_vec·v)·v_vec ]
+///
+/// with r_vec, v_vec the target's position/velocity relative to `source`.
+pub fn add_gr_accelerations(
+    acc: &mut [[f64; 3]],
+    bodies: &[Body],
+    g: f64,
+    c: f64,
+    source: usize,
+    targets: &[usize],
+) {
+    let gm = g * bodies[source].mass;
+    let c2 = c * c;
+    for &t in targets {
+        if t == source {
+            continue;
+        }
+        let r_vec = [
+            bodies[t].pos[0] - bodies[source].pos[0],
+            bodies[t].pos[1] - bodies[source].pos[1],
+            bodies[t].pos[2] - bodies[source].pos[2],
+        ];
+        let v_vec = [
+            bodies[t].vel[0] - bodies[source].vel[0],
+            bodies[t].vel[1] - bodies[source].vel[1],
+            bodies[t].vel[2] - bodies[source].vel[2],
+        ];
+        let r2 = r_vec[0] * r_vec[0] + r_vec[1] * r_vec[1] + r_vec[2] * r_vec[2];
+        let r = r2.sqrt();
+        if r == 0.0 {
+            continue;
+        }
+        let v2 = v_vec[0] * v_vec[0] + v_vec[1] * v_vec[1] + v_vec[2] * v_vec[2];
+        let rv = r_vec[0] * v_vec[0] + r_vec[1] * v_vec[1] + r_vec[2] * v_vec[2];
+        let pref = gm / (c2 * r2 * r); // GM / (c² r³)
+        let radial = 4.0 * gm / r - v2;
+        for k in 0..3 {
+            acc[t][k] += pref * (radial * r_vec[k] + 4.0 * rv * v_vec[k]);
+        }
+    }
+}
+
 /// Index of the body exerting the strongest gravitational pull on `target`
 /// (its "dominant attractor"), or None if it's the only body.
 pub fn dominant_attractor(bodies: &[Body], target: usize, g: f64) -> Option<usize> {

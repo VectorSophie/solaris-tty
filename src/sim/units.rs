@@ -4,6 +4,9 @@
 /// Newtonian gravitational constant (CODATA 2018), m^3 kg^-1 s^-2.
 pub const G: f64 = 6.674_30e-11;
 
+/// Speed of light in vacuum, m/s (exact, SI). Used by the 1PN GR correction.
+pub const C_LIGHT: f64 = 299_792_458.0;
+
 /// Astronomical unit (IAU 2012), metres.
 pub const AU: f64 = 1.495_978_707e11;
 
