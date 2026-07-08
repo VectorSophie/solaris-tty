@@ -109,6 +109,14 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                         }
                                         None => status_msg = Some(format!("unknown scale '{}'", arg.trim())),
                                     }
+                                } else if let Some(arg) = line.trim().strip_prefix("render ") {
+                                    match render::scene::Fill::from_name(arg.trim()) {
+                                        Some(f) => {
+                                            fill = f;
+                                            status_msg = Some(format!("fill: {}", f.name()));
+                                        }
+                                        None => status_msg = Some(format!("unknown fill '{}'", arg.trim())),
+                                    }
                                 } else {
                                     match command::execute(&mut world, selected, &line) {
                                         Ok(out) => {
@@ -218,6 +226,14 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                         KeyCode::Char('c') => {
                             representation = representation.cycle();
                             status_msg = Some(format!("view: {}", representation.name()));
+                        }
+                        KeyCode::Char('g') => {
+                            fill = fill.cycle();
+                            status_msg = Some(format!("fill: {}", fill.name()));
+                        }
+                        KeyCode::Char('l') => {
+                            show_chrome = !show_chrome;
+                            status_msg = Some(format!("labels: {}", if show_chrome { "on" } else { "off" }));
                         }
                         _ => {}
                     }
