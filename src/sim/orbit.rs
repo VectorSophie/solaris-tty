@@ -99,6 +99,19 @@ impl Elements {
         }
     }
 
+    /// First-order GR perihelion advance in arcseconds per century, for a bound
+    /// orbit: Δϖ = 6π·μ / (c²·a·(1−e²)) radians per orbit, scaled by the number
+    /// of orbits in a century. None for unbound orbits.
+    pub fn gr_precession_arcsec_per_century(&self, c: f64) -> Option<f64> {
+        let period = self.period()?;
+        let a = self.semi_major_axis;
+        let denom = c * c * a * (1.0 - self.eccentricity * self.eccentricity);
+        let per_orbit = 6.0 * std::f64::consts::PI * self.mu / denom; // radians
+        let orbits_per_century = (100.0 * 365.25 * 86_400.0) / period;
+        let rad_to_arcsec = 180.0 / std::f64::consts::PI * 3600.0;
+        Some(per_orbit * orbits_per_century * rad_to_arcsec)
+    }
+
     /// Human-readable status line for the trace panel.
     pub fn status(&self) -> &'static str {
         match self.class {

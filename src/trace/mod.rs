@@ -211,6 +211,41 @@ pub fn escape_lines(world: &World, i: usize) -> Vec<String> {
     out
 }
 
+/// GR trace for body `i` relative to the world's GR source.
+pub fn gr_lines(world: &World, i: usize) -> Vec<String> {
+    use crate::sim::units::C_LIGHT;
+    let mut out = vec![format!(
+        "General relativity — 1PN Schwarzschild (source: {})",
+        if world.gr_source.is_empty() { "Sun" } else { &world.gr_source }
+    )];
+    let src = world.find_body(&world.gr_source).or_else(|| {
+        world
+            .bodies
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.mass.total_cmp(&b.1.mass))
+            .map(|(j, _)| j)
+    });
+    let Some(s) = src else {
+        out.push("  (no source body)".into());
+        return out;
+    };
+    if s == i {
+        out.push("  (source body — no self-correction)".into());
+        return out;
+    }
+    let b = &world.bodies[i];
+    let att = &world.bodies[s];
+    let e = elements(b, att.pos, att.vel, world.g * att.mass);
+    out.push("  a_GR = (GM/c²r³)[ (4GM/r − v²)r + 4(r·v)v ]".into());
+    out.push(format!("  {}: a = {} m, e = {}", b.name, sci(e.semi_major_axis), fmt(e.eccentricity)));
+    match e.gr_precession_arcsec_per_century(C_LIGHT) {
+        Some(arc) => out.push(format!("  Δϖ = 6πGM/(c²a(1−e²)) → {} ″/century", fmt(arc))),
+        None => out.push("  (unbound — no perihelion advance)".into()),
+    }
+    out
+}
+
 /// Edit trace: after a `:set`, show whether the body is now stable, elliptical,
 /// escaping, or doomed — the design's "editing velocity" panel.
 pub fn edit_lines(world: &World, i: usize) -> Vec<String> {

@@ -213,3 +213,28 @@ fn relativity_toggle_changes_trajectory_and_off_is_noop() {
     }
     assert_eq!(off.bodies[1].pos, newt.bodies[1].pos);
 }
+
+#[test]
+fn mercury_precession_matches_gr() {
+    use solaris_tty::sim::orbit::{Class, Elements};
+    use solaris_tty::sim::units::{C_LIGHT, G, M_SUN};
+
+    // Mercury's real elements.
+    let a = 5.790905e10_f64;
+    let e = 0.205630_f64;
+    let mu = G * M_SUN;
+    let els = Elements {
+        mu,
+        r: a,
+        speed: (mu / a).sqrt(),
+        v_circular: (mu / a).sqrt(),
+        v_escape: (2.0 * mu / a).sqrt(),
+        specific_energy: -mu / (2.0 * a),
+        eccentricity: e,
+        semi_major_axis: a,
+        inclination: 0.0,
+        class: Class::Bound,
+    };
+    let arcsec = els.gr_precession_arcsec_per_century(C_LIGHT).unwrap();
+    assert!((arcsec - 42.98).abs() < 1.0, "got {arcsec}″/century");
+}
