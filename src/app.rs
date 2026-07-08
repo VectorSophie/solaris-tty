@@ -51,7 +51,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
 
     let stars = render::starfield::generate(500);
     let mut representation = Representation::Heliocentric;
-    let mut fill = render::scene::Fill::Blocks;
+    let mut fill = render::scene::Fill::from_name(&loaded.fill).unwrap_or(render::scene::Fill::Blocks);
     let mut show_chrome = true;
     let mut screensaver = screensaver_start;
     let mut saver_angle: f32 = 0.0;

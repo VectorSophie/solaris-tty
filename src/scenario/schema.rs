@@ -65,6 +65,8 @@ pub struct Render {
     pub trail_length: usize,
     #[serde(default)]
     pub show_labels: bool,
+    #[serde(default = "default_fill")]
+    pub fill: String,
 }
 
 fn default_scale() -> String {
@@ -73,6 +75,9 @@ fn default_scale() -> String {
 fn default_trail() -> usize {
     2000
 }
+fn default_fill() -> String {
+    "blocks".into()
+}
 
 impl Default for Render {
     fn default() -> Self {
@@ -80,6 +85,7 @@ impl Default for Render {
             scale: default_scale(),
             trail_length: default_trail(),
             show_labels: true,
+            fill: default_fill(),
         }
     }
 }

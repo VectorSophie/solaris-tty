@@ -17,6 +17,30 @@ fn solar_toml_parses_and_has_expected_bodies() {
 }
 
 #[test]
+fn render_fill_field_parses_and_defaults() {
+    // Explicit fill survives the round trip.
+    let src = r#"
+name = "t"
+description = "d"
+[simulation]
+[render]
+fill = "ascii"
+[[bodies]]
+name = "A"
+kind = "star"
+mass = 1.0e30
+radius = 1.0e8
+distance = 0.0
+orbital_velocity = 0.0
+"#;
+    let loaded = solaris_tty::scenario::from_str(src).unwrap();
+    assert_eq!(loaded.fill, "ascii");
+    // Omitted → defaults to blocks (solar.toml sets no fill).
+    let solar = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
+    assert_eq!(solar.fill, "blocks");
+}
+
+#[test]
 fn moons_are_offset_from_their_parent() {
     use solaris_tty::sim::body::{vec_len, vec_sub};
     let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
