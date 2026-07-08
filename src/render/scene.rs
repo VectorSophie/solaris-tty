@@ -18,6 +18,15 @@ use crate::sim::World;
 const STAR_DEPTH: f32 = 1e-5; // behind everything, but > 0 so it composites
 const STAR_DIST: f32 = 1.0e5; // effectively at infinity
 
+/// Dark→bright ASCII ramp. Leading space keeps the unlit limb transparent,
+/// giving a round silhouette and a real terminator.
+const RAMP: &[u8] = b" .:-=+*#%@";
+
+fn ramp_glyph(bright: f32) -> char {
+    let i = (bright.clamp(0.0, 1.0) * (RAMP.len() - 1) as f32).round() as usize;
+    RAMP[i] as char
+}
+
 /// Reference frame / framing, orthogonal to `ScaleMode`.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Representation {
@@ -236,7 +245,6 @@ pub fn render(
 
     // --- bodies as shaded half-block spheres ---
     for (bi, b) in world.bodies.iter().enumerate() {
-        let _ = fill;
         let center = world_to_render(mode, frame_world(rep, b.pos, ref_cur));
         let (cx, cy, iz) = match project(&mvp, center, wf, phf) {
             Some(v) => v,
@@ -257,24 +265,74 @@ pub fn render(
         let x1 = (cx + rx).ceil() as i32;
         let y0 = (cy - ry).floor() as i32;
         let y1 = (cy + ry).ceil() as i32;
-        for py in y0..=y1 {
-            for px in x0..=x1 {
-                let nx = (px as f32 + 0.5 - cx) / rx;
-                let ny = (py as f32 + 0.5 - cy) / ry;
-                let r2 = nx * nx + ny * ny;
-                if r2 > 1.0 {
-                    continue;
+        match fill {
+            Fill::Blocks => {
+                for py in y0..=y1 {
+                    for px in x0..=x1 {
+                        let nx = (px as f32 + 0.5 - cx) / rx;
+                        let ny = (py as f32 + 0.5 - cy) / ry;
+                        let r2 = nx * nx + ny * ny;
+                        if r2 > 1.0 {
+                            continue;
+                        }
+                        let nz = (1.0 - r2).max(0.0).sqrt();
+                        let color = if emissive {
+                            // Hot core: lighten toward white near the centre.
+                            mix(base, Color::Rgb { r: 255, g: 255, b: 255 }, nz * 0.5)
+                        } else {
+                            let normal = Vec3::new(nx, -ny, nz); // screen y is down
+                            let s = (0.12 + 0.88 * normal.dot(light_view).max(0.0)).clamp(0.0, 1.0);
+                            scale(base, s)
+                        };
+                        fb.write_pixel(px, py, color, iz);
+                    }
                 }
-                let nz = (1.0 - r2).max(0.0).sqrt();
-                let color = if emissive {
-                    // Hot core: lighten toward white near the centre.
-                    mix(base, Color::Rgb { r: 255, g: 255, b: 255 }, nz * 0.5)
-                } else {
-                    let normal = Vec3::new(nx, -ny, nz); // screen y is down
-                    let b = (0.12 + 0.88 * normal.dot(light_view).max(0.0)).clamp(0.0, 1.0);
-                    scale(base, b)
-                };
-                fb.write_pixel(px, py, color, iz);
+            }
+            Fill::Ascii | Fill::Text => {
+                // Cell resolution: the pixel layer is 2× taller than cells.
+                let ccy = cy / 2.0;
+                let cry = (ry / 2.0).max(0.5);
+                let cx0 = (cx - rx).floor() as i32;
+                let cx1 = (cx + rx).ceil() as i32;
+                let cy0 = (ccy - cry).floor() as i32;
+                let cy1 = (ccy + cry).ceil() as i32;
+                let name: Vec<char> = b.name.chars().filter(|c| !c.is_whitespace()).collect();
+                // ponytail: no depth sort between bodies in cell fills; overlapping
+                // bodies draw in scenario order. Add a painter's sort if it shows.
+                let mut ti = 0usize;
+                for cyi in cy0..=cy1 {
+                    for cxi in cx0..=cx1 {
+                        let nx = (cxi as f32 + 0.5 - cx) / rx;
+                        let ny = (cyi as f32 + 0.5 - ccy) / cry;
+                        let r2 = nx * nx + ny * ny;
+                        if r2 > 1.0 {
+                            continue;
+                        }
+                        let nz = (1.0 - r2).max(0.0).sqrt();
+                        let bright = if emissive {
+                            (0.5 + 0.5 * nz).clamp(0.0, 1.0)
+                        } else {
+                            let normal = Vec3::new(nx, -ny, nz);
+                            (0.12 + 0.88 * normal.dot(light_view).max(0.0)).clamp(0.0, 1.0)
+                        };
+                        let ch = match fill {
+                            Fill::Ascii => ramp_glyph(bright),
+                            Fill::Text => {
+                                let c = if name.is_empty() {
+                                    '?'
+                                } else {
+                                    name[ti % name.len()]
+                                };
+                                ti += 1;
+                                c
+                            }
+                            Fill::Blocks => unreachable!(),
+                        };
+                        if ch != ' ' && fb.in_bounds(cxi, cyi) {
+                            fb.write_str(cxi as u16, cyi as u16, &ch.to_string(), scale(base, bright), Color::Reset);
+                        }
+                    }
+                }
             }
         }
 
