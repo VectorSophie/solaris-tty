@@ -52,6 +52,39 @@ impl Representation {
     }
 }
 
+/// How a body's sphere is drawn. Orthogonal to `ScaleMode` and `Representation`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Fill {
+    Blocks, // shaded half-blocks in the 2×-vertical pixel layer (default)
+    Ascii,  // brightness-ramp glyphs at cell resolution
+    Text,   // the body's own name tiled over the disc, brightness-shaded
+}
+
+impl Fill {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Blocks => "blocks",
+            Self::Ascii => "ascii",
+            Self::Text => "text",
+        }
+    }
+    pub fn from_name(s: &str) -> Option<Self> {
+        match s {
+            "blocks" => Some(Self::Blocks),
+            "ascii" => Some(Self::Ascii),
+            "text" => Some(Self::Text),
+            _ => None,
+        }
+    }
+    pub fn cycle(self) -> Self {
+        match self {
+            Self::Blocks => Self::Ascii,
+            Self::Ascii => Self::Text,
+            Self::Text => Self::Blocks,
+        }
+    }
+}
+
 // Helical: the whole system drifts in a straight line and planets trace true
 // helices — sometimes ahead of the Sun, sometimes behind (the honest version,
 // not the debunked "vortex" that forces planets to trail a comet-like Sun).
