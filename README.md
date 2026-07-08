@@ -52,13 +52,20 @@ solaris-tty run trojans    # bundled scenarios: solar, binary, figure8, trojans
 
 Controls: **WASD/R/F** fly · **arrows** look · **right-click** a body for its details
 card · **Tab** select · **[ ]** speed · **Space** pause · **.** step ·
-**v** cycle scale mode · **c** cycle representation (frame) · **z** screensaver · **m** trace mode ·
+**v** cycle scale mode · **g** cycle sphere fill (blocks/ascii/text) · **l** toggle labels/HUD ·
+**c** cycle representation (frame) · **z** screensaver · **m** trace mode ·
 **:** command · **q** quit.
 
 **Representations** (`c`): heliocentric (default) · top-down ecliptic map · geocentric
 (Earth-centered, shows retrograde epicycles) · co-rotating/synodic (freezes the selected
 body — reveals resonances & Lagrange points) · helical (Sun drifts, planets corkscrew —
 the *correct* helix, not the debunked "vortex").
+
+**Render modes** (`g`, or `:render blocks|ascii|text`): **blocks** (default) shaded
+half-block spheres · **ascii** the same lit sphere in a `.:-=+*#%@` brightness ramp ·
+**text** the sphere tiled from the body's own name, brightness-shaded. `l` hides all
+labels and the HUD for a clean screensaver frame. A scenario can preset its fill with
+`[render] fill = "ascii"`.
 
 Spawn a body and watch the math, inspect, or switch scale:
 
