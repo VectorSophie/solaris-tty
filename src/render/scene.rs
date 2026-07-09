@@ -28,13 +28,14 @@ fn ramp_glyph(bright: f32) -> char {
 }
 
 /// Reference frame / framing, orthogonal to `ScaleMode`.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Representation {
     Heliocentric,
     Geocentric,
     TopDown,
     Helical,
     Synodic,
+    Vortex,
 }
 
 impl Representation {
@@ -45,6 +46,7 @@ impl Representation {
             Self::TopDown => "top-down",
             Self::Helical => "helical",
             Self::Synodic => "co-rotating",
+            Self::Vortex => "vortex",
         }
     }
     pub fn cycle(self) -> Self {
@@ -53,7 +55,8 @@ impl Representation {
             Self::TopDown => Self::Geocentric,
             Self::Geocentric => Self::Synodic,
             Self::Synodic => Self::Helical,
-            Self::Helical => Self::Heliocentric,
+            Self::Helical => Self::Vortex,
+            Self::Vortex => Self::Heliocentric,
         }
     }
     pub fn from_name(s: &str) -> Option<Self> {
@@ -63,6 +66,7 @@ impl Representation {
             "geocentric" => Some(Self::Geocentric),
             "co-rotating" | "synodic" => Some(Self::Synodic),
             "helical" => Some(Self::Helical),
+            "vortex" => Some(Self::Vortex),
             _ => None,
         }
     }
@@ -104,11 +108,31 @@ impl Fill {
     }
 }
 
-// Helical: the whole system drifts in a straight line and planets trace true
-// helices — sometimes ahead of the Sun, sometimes behind (the honest version,
-// not the debunked "vortex" that forces planets to trail a comet-like Sun).
-const HELIX_DIR: Vec3 = Vec3::new(0.0, 0.18, 1.0);
+// Correct helix: the Sun drifts ~230 km/s around the galaxy and the ecliptic is
+// tipped ~60° to that motion, so the drift direction sits 30° off the ecliptic
+// normal. Planets then trace true helices. HELIX_RATE is a purely visual scale.
+const HELIX_DIR: Vec3 = Vec3::new(0.5, 0.0, 0.866); // 30° from +Z ⇒ orbits tipped 60°
 const HELIX_RATE: f32 = 2.2e-7; // render units per second of sim time
+// Debunked "vortex": drift straight up the ecliptic normal (orbits 90° to motion)
+// plus a fake side-to-side corkscrew — the geometry the viral video shows.
+const VORTEX_DIR: Vec3 = Vec3::new(0.0, 0.0, 1.0);
+const CORKSCREW_AMP: f32 = 0.6; // render units of lateral weave
+const CORKSCREW_FREQ: f32 = 6.0; // weaves per unit drift
+
+/// Display-only drift of a trail point of age `t-now`, for the helical/vortex
+/// views. Zero for every other representation. Physics is unaffected.
+fn drift_offset(rep: Representation, t: f64, now: f64) -> Vec3 {
+    let d = (t - now) as f32 * HELIX_RATE; // render units along the drift (negative = past)
+    match rep {
+        Representation::Helical => HELIX_DIR * d,
+        Representation::Vortex => {
+            let phase = d * CORKSCREW_FREQ;
+            // (cos-1, sin) keeps the newest point (d=0) undisplaced.
+            VORTEX_DIR * d + Vec3::new(phase.cos() - 1.0, phase.sin(), 0.0) * CORKSCREW_AMP
+        }
+        _ => Vec3::ZERO,
+    }
+}
 
 /// Reference body index for representations that re-center or rotate on a body.
 fn reference_index(rep: Representation, world: &World, selected: usize) -> Option<usize> {
@@ -177,7 +201,6 @@ pub fn render(
     // Representation framing: reference body (if any) and its current position.
     let ref_idx = reference_index(rep, world, selected);
     let ref_cur = ref_idx.map(|i| world.bodies[i].pos);
-    let helical = rep == Representation::Helical;
     // Light source = the Sun's framed render position (origin in most frames).
     let sun_render = world
         .bodies
@@ -219,9 +242,7 @@ pub fn render(
                 }
             });
             let mut rp = world_to_render(mode, frame_world(rep, *pos, ref_at));
-            if helical {
-                rp += HELIX_DIR * ((t - now) as f32 * HELIX_RATE);
-            }
+            rp += drift_offset(rep, *t, now);
             if let Some((px, py, iz)) = project(&mvp, rp, wf, phf) {
                 fb.plot_braille((px * 2.0) as i32, (py * 2.0) as i32, iz, col);
             }

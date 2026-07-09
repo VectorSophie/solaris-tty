@@ -65,3 +65,39 @@ fn chrome_off_hides_body_labels() {
     assert!(with.contains("Sun"), "label expected with chrome on");
     assert!(!without.contains("Sun"), "no labels expected with chrome off");
 }
+
+#[test]
+fn representation_from_name_cycle_includes_vortex() {
+    assert_eq!(Representation::from_name("vortex"), Some(Representation::Vortex));
+    assert_eq!(Representation::Vortex.name(), "vortex");
+    let mut r = Representation::Heliocentric;
+    for _ in 0..6 { r = r.cycle(); }
+    assert_eq!(r, Representation::Heliocentric);
+}
+
+#[test]
+fn helical_and_vortex_render_differently() {
+    use glam::Vec3;
+    use solaris_tty::render::scale::ScaleMode;
+    use solaris_tty::render::scene::{self, Fill};
+    use solaris_tty::render::{camera::Camera, FrameBuffer};
+    use solaris_tty::SOLAR_TOML;
+
+    let mut world = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap().world;
+    for _ in 0..300 {
+        world.advance();
+        world.record_trails(400);
+    }
+
+    let shot = |rep| {
+        let mut fb = FrameBuffer::new(120, 40);
+        let stars = solaris_tty::render::starfield::generate(0);
+        let cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
+        fb.clear();
+        scene::render(&mut fb, &cam, &world, 0, &stars, ScaleMode::Compressed, rep, world.time, Fill::Blocks, false);
+        fb.composite_pixels();
+        fb.composite_braille();
+        fb.to_text()
+    };
+    assert_ne!(shot(Representation::Helical), shot(Representation::Vortex));
+}
