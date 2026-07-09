@@ -72,6 +72,8 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut unbound: HashSet<String> = unbound_names(&world);
     // Names of bodies whose orbit will impact their attractor (decay).
     let mut decaying: HashSet<String> = decaying_names(&world);
+    // Names of bodies currently within their primary's rigid Roche limit.
+    let mut roched: HashSet<String> = roche_names(&world);
     // Rewind: ring buffer of state snapshots; cursor = Some(i) while scrubbing.
     let mut history: VecDeque<crate::sim::Snapshot> = VecDeque::new();
     let mut hist_cursor: Option<usize> = None;
@@ -178,6 +180,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                 }
                                 let r = after_restore(&world, selected, details);
                                 (selected, details, unbound, decaying) = r;
+                                roched = roche_names(&world);
                             }
                             // …or take a single live step at the live edge.
                             None => {
@@ -198,6 +201,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                 world.restore(&history[nc]);
                                 let r = after_restore(&world, selected, details);
                                 (selected, details, unbound, decaying) = r;
+                                roched = roche_names(&world);
                             }
                         }
                         KeyCode::Char(']') => steps_per_frame = (steps_per_frame + steps_per_frame / 2 + 1).min(4000),
@@ -293,6 +297,17 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 }
             }
             decaying = current_decay;
+            // Roche detection: bodies newly inside their primary's Roche limit.
+            let current_roche = roche_names(&world);
+            for name in current_roche.difference(&roched) {
+                if let Some(i) = world.find_body(name) {
+                    if let Some(p) = crate::sim::gravity::dominant_attractor(&world.bodies, i, world.g) {
+                        status_msg = Some(format!("Roche: {name} inside tidal limit"));
+                        panel_override = Some(trace::roche_lines(&world, i, p));
+                    }
+                }
+            }
+            roched = current_roche;
             // Record a rewind snapshot at the live edge.
             history.push_back(world.snapshot());
             while history.len() > HIST_CAP {
@@ -474,6 +489,28 @@ fn decaying_names(world: &World) -> HashSet<String> {
                 if q < att.radius + b.radius {
                     set.insert(b.name.clone());
                 }
+            }
+        }
+    }
+    set
+}
+
+/// Names of bodies currently within their dominant attractor's rigid Roche limit.
+fn roche_names(world: &World) -> HashSet<String> {
+    use crate::sim::body::{vec_len, vec_sub};
+    use crate::sim::gravity::dominant_attractor;
+    let mut set = HashSet::new();
+    for i in 0..world.bodies.len() {
+        if let Some(p) = dominant_attractor(&world.bodies, i, world.g) {
+            let m = &world.bodies[i];
+            let pri = &world.bodies[p];
+            if m.density() <= 0.0 || pri.density() <= 0.0 {
+                continue;
+            }
+            let d = vec_len(vec_sub(m.pos, pri.pos));
+            let d_roche = 2.44 * pri.radius * (pri.density() / m.density()).cbrt();
+            if d < d_roche {
+                set.insert(m.name.clone());
             }
         }
     }

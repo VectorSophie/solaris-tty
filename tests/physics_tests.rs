@@ -262,3 +262,27 @@ fn swept_collision_catches_tunnelling() {
         "swept test should catch tunnelling"
     );
 }
+
+#[test]
+fn roche_lines_fire_inside_limit_only() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::units::G;
+    use solaris_tty::sim::World;
+    use solaris_tty::trace::roche_lines;
+
+    let mut primary = Body::new("P", Kind::Planet, 6.0e24, 6.4e6); // ~3.7e3 kg/m³
+    let mut moon = Body::new("m", Kind::Moon, 1.0e15, 5.0e5);       // ~1.9e3 kg/m³
+    primary.pos = [0.0, 0.0, 0.0];
+    moon.pos = [1.0e7, 0.0, 0.0]; // inside the limit for these densities
+    let world_in = World::new(vec![primary.clone(), moon.clone()], G, 1.0, 1, 0.0);
+    let inside = roche_lines(&world_in, 1, 0);
+    assert!(!inside.is_empty());
+    assert!(inside.iter().any(|l| l.contains("inside") || l.contains("break")));
+
+    let mut moon_far = moon.clone();
+    // d_roche for these densities works out to ~2.2e9 m; go well beyond it.
+    moon_far.pos = [1.0e10, 0.0, 0.0];
+    let world_out = World::new(vec![primary, moon_far], G, 1.0, 1, 0.0);
+    let outside = roche_lines(&world_out, 1, 0);
+    assert!(outside.iter().any(|l| l.contains("outside") || l.contains("safe")));
+}

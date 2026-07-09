@@ -194,6 +194,27 @@ pub fn decay_lines(world: &World, i: usize) -> Vec<String> {
     out
 }
 
+/// Roche-limit trace for body `i` against primary `p` (rigid-body limit).
+pub fn roche_lines(world: &World, i: usize, p: usize) -> Vec<String> {
+    let m = &world.bodies[i];
+    let pri = &world.bodies[p];
+    let d = crate::sim::body::vec_len(crate::sim::body::vec_sub(m.pos, pri.pos));
+    // d_roche = 2.44 R_pri (ρ_pri / ρ_sat)^(1/3)
+    let ratio = (pri.density() / m.density()).cbrt();
+    let d_roche = 2.44 * pri.radius * ratio;
+    let mut out = vec![
+        "Roche limit — tidal disruption threshold".into(),
+        "  d_roche = 2.44 R (ρ_M/ρ_m)^⅓".into(),
+        format!("  = 2.44 · {} · ({}/{})^⅓ = {} m", sci(pri.radius), sci(pri.density()), sci(m.density()), sci(d_roche)),
+    ];
+    if d < d_roche {
+        out.push(format!("  {} at d = {} m  <  d_roche  → inside: would break up", m.name, sci(d)));
+    } else {
+        out.push(format!("  {} at d = {} m  ≥  d_roche  → outside: safe", m.name, sci(d)));
+    }
+    out
+}
+
 /// Escape trace: fired when a body crosses onto an unbound trajectory.
 pub fn escape_lines(world: &World, i: usize) -> Vec<String> {
     let b = &world.bodies[i];
