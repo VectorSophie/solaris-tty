@@ -11,6 +11,14 @@ integrator = "leapfrog"
 gravitational_constant = 6.67430e-11
 softening = 1.0e3
 
+# First-order post-Newtonian correction from the Sun's field. Makes Mercury's
+# perihelion precess the textbook ~42.98″/century. Toggle live with `:set gr`.
+[relativity]
+enabled = true
+model = "1pn_schwarzschild"
+source = "Sun"
+targets = ["Mercury", "Venus", "Earth", "Mars"]
+
 [render]
 scale = "compressed"
 planet_size_mode = "exaggerated"

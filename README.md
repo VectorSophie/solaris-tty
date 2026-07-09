@@ -20,7 +20,7 @@ agg docs/demo-solar.cast solaris.gif     # convert to a GIF
 
 Generate your own from any scenario: `cargo run --release -- --record my.cast 300 scene=trojans`.
 
-## Status: v0.1 playable
+## Status: v0.2 playable
 
 - [x] Physics core — direct N-body gravity, velocity-Verlet (leapfrog), SI f64
 - [x] Diagnostics — energy/momentum conservation, orbital elements, classification
@@ -39,6 +39,9 @@ Generate your own from any scenario: `cargo run --release -- --record my.cast 30
 - [x] Representations (`c`): heliocentric · top-down · geocentric · co-rotating · helical
 - [x] Orbital-decay / impact detection (auto-fires a trace)
 - [x] Rewind (scrub time), more scenarios (binary, figure-8, Trojans), asciinema recorder
+- [x] Render modes (`g`): shaded blocks · ascii brightness-ramp · name-tiled text; `l` hides chrome
+- [x] General relativity — 1PN Schwarzschild perihelion precession (Mercury ~43″/century), `:set gr`
+- [x] Roche-limit detection · swept collision test (no tunnelling)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
 for the full design and the verified physical dataset.
@@ -66,6 +69,13 @@ half-block spheres · **ascii** the same lit sphere in a `.:-=+*#%@` brightness 
 **text** the sphere tiled from the body's own name, brightness-shaded. `l` hides all
 labels and the HUD for a clean screensaver frame. A scenario can preset its fill with
 `[render] fill = "ascii"`.
+
+**General relativity** (`:set gr on|off`, or `[relativity]` in a scenario): adds the
+first-order post-Newtonian correction from the Sun's field. Mercury's perihelion
+precesses the textbook ~42.98″/century; toggling GR on fires a trace with the equation
+and the number. The default Solar System ships with it enabled (source `Sun`, targets
+the inner planets). **Roche limit:** when a body crosses its primary's rigid
+tidal-disruption limit `d = 2.44 R (ρ_M/ρ_m)^⅓`, a trace fires (detection only).
 
 Spawn a body and watch the math, inspect, or switch scale:
 

@@ -17,6 +17,13 @@ fn solar_toml_parses_and_has_expected_bodies() {
 }
 
 #[test]
+fn solar_toml_enables_relativity() {
+    let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
+    assert!(loaded.world.gr_enabled);
+    assert_eq!(loaded.world.gr_source, "Sun");
+}
+
+#[test]
 fn render_fill_field_parses_and_defaults() {
     // Explicit fill survives the round trip.
     let src = r#"
