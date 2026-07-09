@@ -1,0 +1,44 @@
+name = "Pythagorean Three-Body"
+description = "Burrau's problem: three masses (3-4-5) at rest on the corners of a 3-4-5 right triangle. Famously chaotic — after close passages it ejects a body. Watch the energy and escape traces."
+
+[simulation]
+time_step = 3600.0
+substeps = 24
+softening = 1.0e9
+
+[render]
+scale = "compressed"
+trail_length = 3000
+representation = "top-down"
+
+[trace]
+mode = "compact"
+show_on_load = true
+show_on_escape = true
+
+[[bodies]]
+name = "M3"
+kind = "star"
+mass = 3.0e30
+radius = 3.0e8
+position = [1.495978707e11, 4.487936121e11, 0.0]
+velocity = [0.0, 0.0, 0.0]
+glyph = "*"
+
+[[bodies]]
+name = "M4"
+kind = "star"
+mass = 4.0e30
+radius = 3.0e8
+position = [-2.991957414e11, -1.495978707e11, 0.0]
+velocity = [0.0, 0.0, 0.0]
+glyph = "*"
+
+[[bodies]]
+name = "M5"
+kind = "star"
+mass = 5.0e30
+radius = 3.0e8
+position = [1.495978707e11, -1.495978707e11, 0.0]
+velocity = [0.0, 0.0, 0.0]
+glyph = "*"
