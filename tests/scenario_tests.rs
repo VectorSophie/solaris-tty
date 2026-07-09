@@ -202,3 +202,10 @@ fn jupiter_has_bound_galilean_moons() {
     let e = elements(&w.bodies[io], w.bodies[jup].pos, w.bodies[jup].vel, w.g * w.bodies[jup].mass);
     assert_eq!(e.class, Class::Bound, "Io should be bound to Jupiter");
 }
+
+#[test]
+fn trappist1_has_seven_planets() {
+    let w = &solaris_tty::scenario::from_str(
+        solaris_tty::scenario_toml("trappist1").unwrap()).unwrap().world;
+    assert_eq!(w.bodies.len(), 8); // star + 7 planets
+}

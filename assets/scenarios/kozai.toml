@@ -1,0 +1,44 @@
+name = "Kozai–Lidov"
+description = "An inner planet with a massive companion star on a 65°-inclined orbit. Over many orbits the planet trades eccentricity for inclination and back — watch its orbital elements."
+
+[simulation]
+time_step = 21600.0
+substeps = 20
+softening = 1.0e7
+
+[render]
+scale = "compressed"
+trail_length = 3000
+representation = "heliocentric"
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "Primary"
+kind = "star"
+mass = 1.989e30
+radius = 6.9634e8
+distance = 0.0
+orbital_velocity = 0.0
+glyph = "*"
+
+[[bodies]]
+name = "Planet"
+kind = "planet"
+mass = 5.972e24
+radius = 6.371e6
+distance = 1.495978707e11
+orbital_velocity = 29780.0
+glyph = "e"
+
+[[bodies]]
+name = "Companion"
+kind = "star"
+mass = 1.989e30
+radius = 6.9634e8
+position = [5.984e11, 0.0, 0.0]
+velocity = [0.0, 6294.0, 13496.0]
+glyph = "*"
+about = "Equal-mass companion at 4 AU, orbit inclined 65° — the Kozai driver"

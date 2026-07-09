@@ -1,0 +1,82 @@
+name = "TRAPPIST-1"
+description = "Seven Earth-sized planets around an ultracool red dwarf, locked in a resonant chain. All orbits fit well inside Mercury's."
+
+[simulation]
+time_step = 30.0
+substeps = 60
+softening = 1.0e6
+
+[render]
+scale = "compressed"
+trail_length = 2000
+representation = "heliocentric"
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "TRAPPIST-1"
+kind = "star"
+mass = 1.787e29
+radius = 8.16e7
+distance = 0.0
+orbital_velocity = 0.0
+glyph = "*"
+about = "0.09 M☉ ultracool dwarf, barely larger than Jupiter"
+
+[[bodies]]
+name = "b"
+kind = "planet"
+mass = 8.21e24
+radius = 7.15e6
+distance = 1.7264e9
+orbital_velocity = 83122.0
+
+[[bodies]]
+name = "c"
+kind = "planet"
+mass = 7.81e24
+radius = 6.99e6
+distance = 2.3637e9
+orbital_velocity = 71034.0
+
+[[bodies]]
+name = "d"
+kind = "planet"
+mass = 2.32e24
+radius = 5.05e6
+distance = 3.3316e9
+orbital_velocity = 59835.0
+
+[[bodies]]
+name = "e"
+kind = "planet"
+mass = 4.13e24
+radius = 5.80e6
+distance = 4.3757e9
+orbital_velocity = 52210.0
+
+[[bodies]]
+name = "f"
+kind = "planet"
+mass = 6.20e24
+radius = 6.67e6
+distance = 5.7581e9
+orbital_velocity = 45513.0
+
+[[bodies]]
+name = "g"
+kind = "planet"
+mass = 7.89e24
+radius = 7.32e6
+distance = 7.0057e9
+orbital_velocity = 41262.0
+
+[[bodies]]
+name = "h"
+kind = "planet"
+mass = 1.95e24
+radius = 4.88e6
+distance = 9.2589e9
+orbital_velocity = 35890.0
