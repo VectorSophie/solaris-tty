@@ -120,6 +120,17 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                         }
                                         None => status_msg = Some(format!("unknown fill '{}'", arg.trim())),
                                     }
+                                } else if let Some(arg) = line.trim().strip_prefix("view ") {
+                                    match render::scene::Representation::from_name(arg.trim()) {
+                                        Some(r) => {
+                                            representation = r;
+                                            status_msg = Some(format!("view: {}", r.name()));
+                                            if let Some(p) = view_panel(r) {
+                                                panel_override = Some(p);
+                                            }
+                                        }
+                                        None => status_msg = Some(format!("unknown view '{}'", arg.trim())),
+                                    }
                                 } else {
                                     match command::execute(&mut world, selected, &line) {
                                         Ok(out) => {
@@ -231,6 +242,9 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                         KeyCode::Char('c') => {
                             representation = representation.cycle();
                             status_msg = Some(format!("view: {}", representation.name()));
+                            if let Some(p) = view_panel(representation) {
+                                panel_override = Some(p);
+                            }
                         }
                         KeyCode::Char('g') => {
                             fill = fill.cycle();
@@ -433,6 +447,16 @@ fn draw_hud(
     };
     let fg = if command.is_some() { Color::Yellow } else { Color::White };
     fb.write_str(0, h - 1, &bar, fg, Color::DarkGrey);
+}
+
+/// Explainer panel shown when entering the helical/vortex views (None otherwise).
+fn view_panel(rep: render::scene::Representation) -> Option<Vec<String>> {
+    use render::scene::Representation::*;
+    match rep {
+        Helical => Some(trace::helix_lines()),
+        Vortex => Some(trace::vortex_lines()),
+        _ => None,
+    }
 }
 
 /// Names of bodies currently on an unbound (ε ≥ 0) trajectory relative to their
