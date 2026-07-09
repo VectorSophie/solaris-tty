@@ -215,6 +215,27 @@ pub fn roche_lines(world: &World, i: usize, p: usize) -> Vec<String> {
     out
 }
 
+/// The correct helical model (fires when entering the `helical` view).
+pub fn helix_lines() -> Vec<String> {
+    vec![
+        "Helical model — the REAL one ✓".into(),
+        "  Sun drifts ~230 km/s around the galaxy (a smooth path)".into(),
+        "  ecliptic tipped ~60° to that motion — not 90°".into(),
+        "  planets trace true helices as the Sun moves".into(),
+    ]
+}
+
+/// The debunked "vortex" model (fires when entering the `vortex` view).
+pub fn vortex_lines() -> Vec<String> {
+    vec![
+        "\"Vortex\" model — the viral video ❌ DEBUNKED".into(),
+        "  ✗ Sun does NOT corkscrew toward/away from the galactic center".into(),
+        "  ✗ orbits tipped 60°, not 90° perpendicular".into(),
+        "  ✗ mixes rotating and inertial frames".into(),
+        "  press c for the honest helix — what actually happens".into(),
+    ]
+}
+
 /// Escape trace: fired when a body crosses onto an unbound trajectory.
 pub fn escape_lines(world: &World, i: usize) -> Vec<String> {
     let b = &world.bodies[i];

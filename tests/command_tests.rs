@@ -72,6 +72,14 @@ fn set_without_name_edits_selection() {
 }
 
 #[test]
+fn vortex_and_helix_traces_are_labeled() {
+    let v = solaris_tty::trace::vortex_lines();
+    let h = solaris_tty::trace::helix_lines();
+    assert!(v.iter().any(|l| l.contains("DEBUNKED")), "vortex trace must be labeled DEBUNKED");
+    assert!(h.iter().any(|l| l.contains("REAL")), "helix trace must be labeled REAL");
+}
+
+#[test]
 fn set_gr_toggles_relativity() {
     let mut w = world();
     let on = execute(&mut w, 0, "set gr on").expect("gr on ok");
