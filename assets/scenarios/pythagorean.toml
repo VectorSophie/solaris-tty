@@ -1,9 +1,9 @@
 name = "Pythagorean Three-Body"
-description = "Burrau's problem: three masses (3-4-5) at rest on the corners of a 3-4-5 right triangle. Famously chaotic — after close passages it ejects a body. Watch the energy and escape traces."
+description = "The 3-4-5 triangle (masses 3, 4, 5) set spinning about its center of mass — a chaotic three-body that slingshots and eventually ejects a member, all while conserving energy. A gentler cousin of Burrau's at-rest problem, tuned so the close passages stay resolvable."
 
 [simulation]
-time_step = 3600.0
-substeps = 24
+time_step = 600.0
+substeps = 60
 softening = 1.0e9
 
 [render]
@@ -22,7 +22,7 @@ kind = "star"
 mass = 3.0e30
 radius = 3.0e8
 position = [1.495978707e11, 4.487936121e11, 0.0]
-velocity = [0.0, 0.0, 0.0]
+velocity = [-31229.0, 10409.0, 0.0]
 glyph = "*"
 
 [[bodies]]
@@ -31,7 +31,7 @@ kind = "star"
 mass = 4.0e30
 radius = 3.0e8
 position = [-2.991957414e11, -1.495978707e11, 0.0]
-velocity = [0.0, 0.0, 0.0]
+velocity = [17506.0, -35013.0, 0.0]
 glyph = "*"
 
 [[bodies]]
@@ -40,5 +40,5 @@ kind = "star"
 mass = 5.0e30
 radius = 3.0e8
 position = [1.495978707e11, -1.495978707e11, 0.0]
-velocity = [0.0, 0.0, 0.0]
+velocity = [34808.0, 34808.0, 0.0]
 glyph = "*"

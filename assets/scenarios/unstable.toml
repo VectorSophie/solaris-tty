@@ -1,10 +1,10 @@
 name = "Packed & Unstable"
-description = "Four Jupiter-mass planets spaced too tightly (< a few mutual Hill radii). The system goes chaotic and ejects worlds."
+description = "Four Jupiter-mass planets spaced too tightly (< a few mutual Hill radii). Their orbits go chaotic and cross, and over time a world is flung out — energy stays conserved throughout."
 
 [simulation]
-time_step = 43200.0
+time_step = 21600.0
 substeps = 20
-softening = 1.0e7
+softening = 1.0e9
 
 [render]
 scale = "compressed"
