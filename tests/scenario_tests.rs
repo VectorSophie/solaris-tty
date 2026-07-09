@@ -189,3 +189,16 @@ fn all_bundled_scenarios_load() {
         assert!(energy.is_finite(), "scenario '{name}' has non-finite energy");
     }
 }
+
+#[test]
+fn jupiter_has_bound_galilean_moons() {
+    use solaris_tty::sim::gravity::dominant_attractor;
+    use solaris_tty::sim::orbit::{elements, Class};
+    let w = &solaris_tty::scenario::from_str(
+        solaris_tty::scenario_toml("jupiter").unwrap()).unwrap().world;
+    assert_eq!(w.bodies.len(), 5);
+    let io = w.find_body("Io").unwrap();
+    let jup = dominant_attractor(&w.bodies, io, w.g).unwrap();
+    let e = elements(&w.bodies[io], w.bodies[jup].pos, w.bodies[jup].vel, w.g * w.bodies[jup].mass);
+    assert_eq!(e.class, Class::Bound, "Io should be bound to Jupiter");
+}

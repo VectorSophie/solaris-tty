@@ -1,0 +1,34 @@
+name = "Earth–Moon"
+description = "The Earth–Moon system in the co-rotating frame — the barycenter sits ~4670 km from Earth's center, still inside the planet."
+
+[simulation]
+time_step = 300.0
+substeps = 60
+softening = 1.0e3
+
+[render]
+scale = "compressed"
+trail_length = 2000
+representation = "co-rotating"
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "Earth"
+kind = "planet"
+mass = 5.972e24
+radius = 6.371e6
+position = [-4.667e6, 0.0, 0.0]
+velocity = [0.0, -12.44, 0.0]
+glyph = "e"
+
+[[bodies]]
+name = "Moon"
+kind = "moon"
+mass = 7.342e22
+radius = 1.737e6
+position = [3.7973e8, 0.0, 0.0]
+velocity = [0.0, 1012.0, 0.0]
+about = "Raises Earth's tides; slowly receding ~3.8 cm/yr"

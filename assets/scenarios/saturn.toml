@@ -1,0 +1,63 @@
+name = "Saturn, its Rings & Moons"
+description = "Enceladus, Rhea, Titan, Iapetus around ringed Saturn."
+
+[simulation]
+time_step = 200.0
+substeps = 60
+softening = 1.0e5
+
+[render]
+scale = "compressed"
+trail_length = 2000
+representation = "heliocentric"
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "Saturn"
+kind = "planet"
+mass = 5.683e26
+radius = 6.0268e7
+distance = 0.0
+orbital_velocity = 0.0
+ring_inner = 1.2
+ring_outer = 2.3
+glyph = "@"
+about = "Ringed gas giant; least dense planet (floats in water)"
+
+[[bodies]]
+name = "Enceladus"
+kind = "moon"
+mass = 1.08e20
+radius = 2.521e5
+distance = 2.380e8
+orbital_velocity = 12626.0
+about = "Icy moon venting geysers from a subsurface ocean"
+
+[[bodies]]
+name = "Rhea"
+kind = "moon"
+mass = 2.306e21
+radius = 7.634e5
+distance = 5.271e8
+orbital_velocity = 8484.0
+
+[[bodies]]
+name = "Titan"
+kind = "moon"
+mass = 1.345e23
+radius = 2.5747e6
+distance = 1.2219e9
+orbital_velocity = 5572.0
+about = "Thick atmosphere, methane lakes; larger than Mercury"
+
+[[bodies]]
+name = "Iapetus"
+kind = "moon"
+mass = 1.806e21
+radius = 7.346e5
+distance = 3.5613e9
+orbital_velocity = 3264.0
+about = "Two-toned moon, one hemisphere bright, one dark"

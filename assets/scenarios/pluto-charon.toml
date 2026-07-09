@@ -1,0 +1,35 @@
+name = "Pluto–Charon Binary"
+description = "A true binary: Pluto and Charon both orbit a barycenter that sits in empty space between them."
+
+[simulation]
+time_step = 300.0
+substeps = 60
+softening = 1.0e4
+
+[render]
+scale = "compressed"
+trail_length = 2400
+representation = "heliocentric"
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "Pluto"
+kind = "planet"
+mass = 1.303e22
+radius = 1.188e6
+position = [-2.126e6, 0.0, 0.0]
+velocity = [0.0, -24.2, 0.0]
+glyph = "o"
+about = "Dwarf planet; the barycenter with Charon lies above its surface"
+
+[[bodies]]
+name = "Charon"
+kind = "moon"
+mass = 1.586e21
+radius = 6.06e5
+position = [1.7470e7, 0.0, 0.0]
+velocity = [0.0, 198.9, 0.0]
+about = "Half Pluto's diameter — the two are mutually tidally locked"
