@@ -133,6 +133,34 @@ orbital_velocity = 47000.0
 }
 
 #[test]
+fn representation_field_parses_and_defaults() {
+    let src = r#"
+name = "t"
+[simulation]
+[render]
+representation = "geocentric"
+[[bodies]]
+name = "A"
+kind = "star"
+mass = 2.0e30
+radius = 7.0e8
+distance = 0.0
+orbital_velocity = 0.0
+[[bodies]]
+name = "B"
+kind = "planet"
+mass = 6.0e24
+radius = 6.4e6
+distance = 1.5e11
+orbital_velocity = 29780.0
+"#;
+    let loaded = solaris_tty::scenario::from_str(src).unwrap();
+    assert_eq!(loaded.representation, "geocentric");
+    let solar = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
+    assert_eq!(solar.representation, "heliocentric"); // default
+}
+
+#[test]
 fn relativity_rejects_unknown_model() {
     let src = r#"
 name = "t"

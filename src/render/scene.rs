@@ -56,6 +56,16 @@ impl Representation {
             Self::Helical => Self::Heliocentric,
         }
     }
+    pub fn from_name(s: &str) -> Option<Self> {
+        match s {
+            "heliocentric" => Some(Self::Heliocentric),
+            "top-down" | "topdown" => Some(Self::TopDown),
+            "geocentric" => Some(Self::Geocentric),
+            "co-rotating" | "synodic" => Some(Self::Synodic),
+            "helical" => Some(Self::Helical),
+            _ => None,
+        }
+    }
     pub fn is_topdown(self) -> bool {
         matches!(self, Self::TopDown)
     }

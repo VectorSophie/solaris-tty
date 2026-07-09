@@ -50,7 +50,8 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut cam = Camera::looking_at_origin(Vec3::new(0.0, extent * 1.7, extent * 1.2));
 
     let stars = render::starfield::generate(500);
-    let mut representation = Representation::Heliocentric;
+    let mut representation =
+        Representation::from_name(&loaded.representation).unwrap_or(Representation::Heliocentric);
     let mut fill = render::scene::Fill::from_name(&loaded.fill).unwrap_or(render::scene::Fill::Blocks);
     let mut show_chrome = true;
     let mut screensaver = screensaver_start;
