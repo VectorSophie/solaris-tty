@@ -1,0 +1,77 @@
+name = "Ptolemaic (Geocentrism, for fun)"
+description = "Earth in the middle of everything — given the Sun's mass so the whole sky genuinely circles us. Cursed but stable: because Earth is this heavy, every body keeps its real orbital period. The Sun is shrunk so Earth stays in charge."
+
+[simulation]
+time_step = 3600.0
+substeps = 48
+softening = 1.0e6
+
+[render]
+scale = "compressed"
+trail_length = 3000
+representation = "geocentric"
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "Earth"
+kind = "planet"
+mass = 1.989e30
+radius = 6.371e6
+distance = 0.0
+orbital_velocity = 0.0
+glyph = "e"
+about = "The center of the universe (for one scenario only)"
+
+[[bodies]]
+name = "Sun"
+kind = "star"
+mass = 1.0e29
+radius = 6.9634e8
+distance = 1.495978707e11
+orbital_velocity = 29780.0
+glyph = "*"
+about = "Demoted to a satellite; mass shrunk so Earth dominates"
+
+[[bodies]]
+name = "Mercury"
+kind = "planet"
+mass = 3.30e23
+radius = 2.4397e6
+distance = 5.79e10
+orbital_velocity = 47875.0
+
+[[bodies]]
+name = "Venus"
+kind = "planet"
+mass = 4.867e24
+radius = 6.0518e6
+distance = 1.082e11
+orbital_velocity = 35020.0
+
+[[bodies]]
+name = "Mars"
+kind = "planet"
+mass = 6.417e23
+radius = 3.3895e6
+distance = 2.279e11
+orbital_velocity = 24131.0
+
+[[bodies]]
+name = "Jupiter"
+kind = "planet"
+mass = 1.898e27
+radius = 6.9911e7
+distance = 7.785e11
+orbital_velocity = 13061.0
+glyph = "@"
+
+[[bodies]]
+name = "Saturn"
+kind = "planet"
+mass = 5.683e26
+radius = 6.0268e7
+distance = 1.434e12
+orbital_velocity = 9620.0

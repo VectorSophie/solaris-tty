@@ -209,3 +209,15 @@ fn trappist1_has_seven_planets() {
         solaris_tty::scenario_toml("trappist1").unwrap()).unwrap().world;
     assert_eq!(w.bodies.len(), 8); // star + 7 planets
 }
+
+#[test]
+fn ptolemaic_puts_earth_at_the_center_and_heaviest() {
+    let w = &solaris_tty::scenario::from_str(
+        solaris_tty::scenario_toml("ptolemaic").unwrap()).unwrap().world;
+    let earth = w.find_body("Earth").unwrap();
+    // Earth is the most massive body...
+    let heaviest = (0..w.bodies.len()).max_by(|&a, &b| w.bodies[a].mass.total_cmp(&w.bodies[b].mass)).unwrap();
+    assert_eq!(earth, heaviest);
+    // ...and sits at the origin.
+    assert_eq!(w.bodies[earth].pos, [0.0, 0.0, 0.0]);
+}

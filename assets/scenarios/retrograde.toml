@@ -1,0 +1,45 @@
+name = "Retrograde World"
+description = "Two planets around one star — one orbits prograde, the other retrograde. They sweep past each other every crossing."
+
+[simulation]
+time_step = 3600.0
+substeps = 48
+softening = 1.0e6
+
+[render]
+scale = "compressed"
+trail_length = 2400
+representation = "heliocentric"
+
+[trace]
+mode = "compact"
+show_on_load = true
+
+[[bodies]]
+name = "Sun"
+kind = "star"
+mass = 1.989e30
+radius = 6.9634e8
+distance = 0.0
+orbital_velocity = 0.0
+glyph = "*"
+
+[[bodies]]
+name = "Prograde"
+kind = "planet"
+mass = 5.972e24
+radius = 6.371e6
+distance = 1.495978707e11
+orbital_velocity = 29780.0
+glyph = "o"
+about = "Orbits the normal way (counter-clockwise from ecliptic north)"
+
+[[bodies]]
+name = "Wrongway"
+kind = "planet"
+mass = 5.972e24
+radius = 6.371e6
+distance = 1.9448e11
+orbital_velocity = -26123.0
+glyph = "x"
+about = "Retrograde — negative orbital velocity"
