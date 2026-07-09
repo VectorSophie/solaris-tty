@@ -50,7 +50,10 @@ for the full design and the verified physical dataset.
 
 ```
 solaris-tty                # or: cargo run --release
-solaris-tty run trojans    # bundled scenarios: solar, binary, figure8, trojans
+solaris-tty run jupiter    # bundled: solar, binary, figure8, trojans,
+                           # jupiter, saturn, pluto-charon, earth-moon,
+                           # pythagorean, flyby, unstable, trappist1,
+                           # kozai, ptolemaic, retrograde
 ```
 
 Controls: **WASD/R/F** fly · **arrows** look · **right-click** a body for its details
@@ -58,6 +61,12 @@ card · **Tab** select · **[ ]** speed · **Space** pause · **.** step ·
 **v** cycle scale mode · **g** cycle sphere fill (blocks/ascii/text) · **l** toggle labels/HUD ·
 **c** cycle representation (frame) · **z** screensaver · **m** trace mode ·
 **:** command · **q** quit.
+
+**Scenario catalog:** moon systems (`jupiter`, `saturn`, `pluto-charon`, `earth-moon`),
+chaos (`pythagorean` — Burrau's ejecting three-body, `flyby` — rogue star, `unstable` —
+packed giants), exoplanets (`trappist1` resonant chain, `kozai` eccentricity cycles),
+and for fun (`ptolemaic` — Earth at the center of everything, `retrograde` — a world
+orbiting the wrong way). Each opens in the camera frame that suits it.
 
 **Representations** (`c`): heliocentric (default) · top-down ecliptic map · geocentric
 (Earth-centered, shows retrograde epicycles) · co-rotating/synodic (freezes the selected
