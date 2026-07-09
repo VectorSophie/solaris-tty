@@ -178,3 +178,14 @@ orbital_velocity = 0.0
 "#;
     assert!(solaris_tty::scenario::from_str(src).is_err());
 }
+
+#[test]
+fn all_bundled_scenarios_load() {
+    for (name, toml) in solaris_tty::SCENARIOS {
+        let loaded = solaris_tty::scenario::from_str(toml)
+            .unwrap_or_else(|e| panic!("scenario '{name}' failed to parse: {e}"));
+        assert!(loaded.world.bodies.len() >= 2, "scenario '{name}' has <2 bodies");
+        let energy = loaded.world.total_energy();
+        assert!(energy.is_finite(), "scenario '{name}' has non-finite energy");
+    }
+}
