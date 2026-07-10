@@ -27,6 +27,7 @@ pub const SCENARIOS: &[(&str, &str)] = &[
     ("kozai", include_str!("../assets/scenarios/kozai.toml")),
     ("ptolemaic", include_str!("../assets/scenarios/ptolemaic.toml")),
     ("retrograde", include_str!("../assets/scenarios/retrograde.toml")),
+    ("vortex", include_str!("../assets/scenarios/vortex.toml")),
 ];
 
 /// Look up a bundled scenario's TOML by name.

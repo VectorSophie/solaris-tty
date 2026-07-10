@@ -180,6 +180,14 @@ orbital_velocity = 0.0
 }
 
 #[test]
+fn vortex_scenario_opens_in_helical() {
+    let loaded = solaris_tty::scenario::from_str(
+        solaris_tty::scenario_toml("vortex").unwrap()).unwrap();
+    assert_eq!(loaded.representation, "helical");
+    assert!(loaded.world.bodies.len() >= 4);
+}
+
+#[test]
 fn all_bundled_scenarios_load() {
     for (name, toml) in solaris_tty::SCENARIOS {
         let loaded = solaris_tty::scenario::from_str(toml)

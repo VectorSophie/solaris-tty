@@ -53,7 +53,7 @@ solaris-tty                # or: cargo run --release
 solaris-tty run jupiter    # bundled: solar, binary, figure8, trojans,
                            # jupiter, saturn, pluto-charon, earth-moon,
                            # pythagorean, flyby, unstable, trappist1,
-                           # kozai, ptolemaic, retrograde
+                           # kozai, ptolemaic, retrograde, vortex
 ```
 
 Controls: **WASD/R/F** fly · **arrows** look · **right-click** a body for its details
@@ -67,6 +67,12 @@ chaos (`pythagorean` — Burrau's ejecting three-body, `flyby` — rogue star, `
 packed giants), exoplanets (`trappist1` resonant chain, `kozai` eccentricity cycles),
 and for fun (`ptolemaic` — Earth at the center of everything, `retrograde` — a world
 orbiting the wrong way). Each opens in the camera frame that suits it.
+
+**Vortex vs helix** (`c`, or `run vortex`): the viral "vortex solar system" video is
+wrong — the Sun's path is smooth (no corkscrew toward/away from the galactic center)
+and the ecliptic is tipped ~60° to its motion, not 90°. solaris-tty renders both: the
+**helical** view (the real 60° helix) and the **vortex** view (the debunked 90°
+corkscrew), each with a trace explaining the difference.
 
 **Representations** (`c`): heliocentric (default) · top-down ecliptic map · geocentric
 (Earth-centered, shows retrograde epicycles) · co-rotating/synodic (freezes the selected

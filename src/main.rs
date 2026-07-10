@@ -188,6 +188,7 @@ fn frame() -> Result<()> {
             "helical" => Some(scene::Representation::Helical),
             "synodic" | "co-rotating" => Some(scene::Representation::Synodic),
             "topdown" | "top-down" => Some(scene::Representation::TopDown),
+            "vortex" => Some(scene::Representation::Vortex),
             _ => None,
         })
         .unwrap_or(scene::Representation::Heliocentric);
