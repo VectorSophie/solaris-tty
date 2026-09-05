@@ -235,9 +235,9 @@ orbital_velocity = 0.0
 }
 
 #[test]
-fn vortex_scenario_opens_in_helical() {
+fn vortex_scenario_opens_in_corkscrew_view() {
     let loaded = solaris_tty::scenario::load_builtin("vortex").unwrap();
-    assert_eq!(loaded.representation, "helical");
+    assert_eq!(loaded.representation, "vortex");
     assert!(loaded.world.bodies.len() >= 4);
 }
 
@@ -258,7 +258,7 @@ fn vortex_reuses_canonical_solar_physics() {
     assert_eq!(vortex.world.gr_enabled, solar.world.gr_enabled);
     assert_eq!(vortex.world.gr_source, solar.world.gr_source);
     assert_eq!(vortex.world.gr_targets, solar.world.gr_targets);
-    assert_eq!(vortex.representation, "helical");
+    assert_eq!(vortex.representation, "vortex");
     assert_eq!(solar.representation, "heliocentric");
 }
 

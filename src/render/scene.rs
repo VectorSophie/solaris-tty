@@ -113,9 +113,13 @@ impl Fill {
 // tipped ~60° to that motion, so the drift direction sits 30° off the ecliptic
 // normal. Planets then trace true helices. HELIX_RATE is a purely visual scale.
 const HELIX_DIR_SIM: [f64; 3] = [0.5, 0.0, 0.866_025_403_784];
-const HELIX_RATE: f32 = 2.2e-7; // render units per second of sim time
-                                // Debunked "vortex": drift straight up the ecliptic normal (orbits 90° to motion)
-                                // plus a fake side-to-side corkscrew — the geometry the viral video shows.
+// Preserve the original vortex preset's visual pitch: one recorded trail
+// sample represented 21,600 s × 20 substeps at 2.2e-7 render units/s.
+// Keeping this in sample space prevents physics timestep changes from silently
+// shrinking or stretching the special representations.
+const SPECIAL_TRAIL_STEP: f32 = 0.095_04;
+// Debunked "vortex": drift straight up the ecliptic normal (orbits 90° to motion)
+// plus a fake side-to-side corkscrew — the geometry the viral video shows.
 const VORTEX_DIR_SIM: [f64; 3] = [0.0, 0.0, 1.0];
 const CORKSCREW_AMP: f32 = 0.6; // render units of lateral weave
 const CORKSCREW_FREQ: f32 = 6.0; // weaves per unit drift
@@ -129,17 +133,24 @@ pub fn representation_axis(rep: Representation) -> Option<Vec3> {
     }
 }
 
-/// Display-only drift of a trail point of age `t-now`, for the helical/vortex
-/// views. Zero for every other representation. Physics is unaffected.
-fn drift_offset(rep: Representation, t: f64, now: f64) -> Vec3 {
-    let d = (t - now) as f32 * HELIX_RATE; // render units along the drift (negative = past)
+/// Display-only drift for a trail sample. `sample` and `newest` are trail
+/// indices, making the visual independent of the simulation timestep.
+fn drift_offset(rep: Representation, sample: f64, newest: f64) -> Vec3 {
+    let age = (newest - sample).max(0.0) as f32;
+    let d = -age * SPECIAL_TRAIL_STEP;
     match rep {
         Representation::Helical => representation_axis(rep).unwrap() * d,
         Representation::Vortex => {
             let phase = d * CORKSCREW_FREQ;
+            let age_fraction = if newest > 0.0 {
+                (age / newest as f32).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let cone = 0.25 + 0.75 * age_fraction;
             // (cos-1, sin) keeps the newest point (d=0) undisplaced.
             representation_axis(rep).unwrap() * d
-                + Vec3::new(phase.cos() - 1.0, 0.0, phase.sin()) * CORKSCREW_AMP
+                + Vec3::new(phase.cos() - 1.0, 0.0, phase.sin()) * CORKSCREW_AMP * cone
         }
         _ => Vec3::ZERO,
     }
@@ -206,7 +217,6 @@ pub fn render(
         fill,
         chrome: show_chrome,
     } = options;
-    let now = world.time;
     let (w, h) = fb.size();
     let (wf, phf) = (w as f32, (h * 2) as f32);
     let aspect = (w as f32 / h as f32) * 0.5; // pixels are square in this layer
@@ -241,7 +251,7 @@ pub fn render(
         }
         let col = dim(body_color(&b.name, b.kind));
         let n = b.trail.len();
-        for (i, (pos, t)) in b.trail.iter().enumerate() {
+        for (i, (pos, _)) in b.trail.iter().enumerate() {
             if i % 2 == 0 && i < n * 3 / 4 {
                 continue; // taper older points
             }
@@ -256,7 +266,7 @@ pub fn render(
                 }
             });
             let mut rp = world_to_render(mode, frame_world(rep, *pos, ref_at));
-            rp += drift_offset(rep, *t, now);
+            rp += drift_offset(rep, i as f64, (n - 1) as f64);
             if let Some((px, py, iz)) = project(&mvp, rp, wf, phf) {
                 fb.plot_braille((px * 2.0) as i32, (py * 2.0) as i32, iz, col);
             }
@@ -554,4 +564,40 @@ fn mix(a: Color, b: Color, t: f32) -> Color {
 
 fn dim(c: Color) -> Color {
     scale(c, 0.5)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{drift_offset, representation_axis, Representation};
+
+    fn lateral_length(offset: glam::Vec3, axis: glam::Vec3) -> f32 {
+        (offset - axis * offset.dot(axis)).length()
+    }
+
+    #[test]
+    fn vortex_restores_the_original_long_trail_span() {
+        let newest_sample = 220.0;
+        let oldest = drift_offset(Representation::Vortex, 0.0, newest_sample);
+        let axis = representation_axis(Representation::Vortex).unwrap();
+
+        let axial_span = oldest.dot(axis).abs();
+        assert!((axial_span - 20.9088).abs() < 0.001, "span = {axial_span}");
+    }
+
+    #[test]
+    fn vortex_corkscrew_widens_into_a_cone() {
+        let newest_sample = 220.0;
+        let axis = representation_axis(Representation::Vortex).unwrap();
+        let near = lateral_length(
+            drift_offset(Representation::Vortex, 215.0, newest_sample),
+            axis,
+        );
+        let far = lateral_length(
+            drift_offset(Representation::Vortex, 6.0, newest_sample),
+            axis,
+        );
+
+        assert!((0.30..0.34).contains(&near), "near radius = {near}");
+        assert!((1.13..1.15).contains(&far), "far radius = {far}");
+    }
 }

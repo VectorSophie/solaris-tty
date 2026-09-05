@@ -10,7 +10,7 @@ pub use loader::{from_str, Loaded};
 pub fn load_builtin(name: &str) -> anyhow::Result<Loaded> {
     if name == "vortex" {
         let mut loaded = from_str(crate::SOLAR_TOML)?;
-        loaded.representation = "helical".into();
+        loaded.representation = "vortex".into();
         loaded.trail_length = 4_000;
         loaded.show_on_load = true;
         return Ok(loaded);

@@ -72,7 +72,8 @@ orbiting the wrong way). Each opens in the camera frame that suits it.
 wrong — the Sun's path is smooth (no corkscrew toward/away from the galactic center)
 and the ecliptic is tipped ~60° to its motion, not 90°. solaris-tty renders both: the
 **helical** view (the real 60° helix) and the **vortex** view (the debunked 90°
-corkscrew), each with a trace explaining the difference.
+corkscrew), each with a trace explaining the difference. `run vortex` opens directly
+in the long, cone-like corkscrew view; press `c` to continue through the other frames.
 
 **Representations** (`c`): heliocentric (default) · top-down ecliptic map · geocentric
 (Earth-centered, shows retrograde epicycles) · co-rotating/synodic (freezes the selected

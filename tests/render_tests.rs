@@ -182,3 +182,49 @@ fn render_sessions_are_deterministic_for_equal_inputs() {
         second.render_text(&loaded.world, 0)
     );
 }
+
+#[test]
+fn vortex_shape_is_independent_of_trail_timestamp_spacing() {
+    use std::collections::VecDeque;
+
+    let mut fast_history = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap().world;
+    let mut slow_history = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap().world;
+    for (fast, slow) in fast_history
+        .bodies
+        .iter_mut()
+        .zip(slow_history.bodies.iter_mut())
+    {
+        fast.trail = (0..220)
+            .map(|i| (fast.pos, i as f64 * 72_000.0))
+            .collect::<VecDeque<_>>();
+        slow.trail = (0..220)
+            .map(|i| (slow.pos, i as f64 * 432_000.0))
+            .collect::<VecDeque<_>>();
+    }
+    fast_history.time = 220.0 * 72_000.0;
+    slow_history.time = 220.0 * 432_000.0;
+
+    let render = |world: &solaris_tty::sim::World| {
+        let mut fb = FrameBuffer::new(120, 40);
+        let stars = solaris_tty::render::starfield::generate(0);
+        let cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
+        scene::render(
+            &mut fb,
+            &cam,
+            world,
+            0,
+            &stars,
+            RenderOptions {
+                scale: ScaleMode::Compressed,
+                representation: Representation::Vortex,
+                fill: Fill::Blocks,
+                chrome: false,
+            },
+        );
+        fb.composite_pixels();
+        fb.composite_braille();
+        fb.to_text()
+    };
+
+    assert_eq!(render(&fast_history), render(&slow_history));
+}
