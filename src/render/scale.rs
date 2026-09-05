@@ -15,7 +15,7 @@ use crate::sim::body::{Body, Kind};
 use crate::sim::units::AU;
 use glam::Vec3;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScaleMode {
     Compressed,
     Realistic,

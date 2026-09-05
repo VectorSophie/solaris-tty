@@ -11,6 +11,7 @@ use glam::Vec3;
 use crate::command;
 use crate::render::scale::ScaleMode;
 use crate::render::scene::{body_color, Representation};
+use crate::render::session::{RenderOptions, RenderSession};
 use crate::render::{camera::Camera, cell::Cell, terminal, FrameBuffer};
 use crate::scenario::Loaded;
 use crate::sim::World;
@@ -23,6 +24,16 @@ enum TraceMode {
     Debug,
 }
 
+impl TraceMode {
+    fn from_name(name: &str) -> Self {
+        match name {
+            "expanded" => Self::Expanded,
+            "debug" => Self::Debug,
+            _ => Self::Compact,
+        }
+    }
+}
+
 pub fn run(loaded: Loaded, screensaver: bool) -> Result<()> {
     terminal::install_panic_hook();
     terminal::setup()?;
@@ -32,13 +43,15 @@ pub fn run(loaded: Loaded, screensaver: bool) -> Result<()> {
 }
 
 fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
+    let initial_render_options = RenderOptions::from_loaded(&loaded);
+    let initial_trace_mode = TraceMode::from_name(&loaded.trace_mode);
+    let show_on_load = loaded.show_on_load;
+    let show_on_spawn = loaded.show_on_spawn;
     let mut world = loaded.world;
     let trail_len = loaded.trail_length.min(1200);
 
     let (mut tw, mut th) = terminal::size();
-    let mut fb = FrameBuffer::new(tw, th);
-
-    let mut scale_mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
+    let mut scale_mode = initial_render_options.scale;
     // Frame the camera to the system's on-screen extent so compact scenarios
     // (figure-8, binary) aren't tiny specks and big ones aren't off-screen.
     let extent = world
@@ -47,22 +60,22 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
         .map(|b| render::scale::world_to_render(scale_mode, b.pos).length())
         .fold(0.0f32, f32::max)
         .max(2.0);
-    let mut cam = Camera::looking_at_origin(Vec3::new(0.0, extent * 1.7, extent * 1.2));
+    let camera = Camera::looking_at_origin(Vec3::new(0.0, extent * 1.7, extent * 1.2));
+    let mut render_session = RenderSession::new(tw, th, camera, initial_render_options, 500);
 
-    let stars = render::starfield::generate(500);
-    let mut representation =
-        Representation::from_name(&loaded.representation).unwrap_or(Representation::Heliocentric);
-    let mut fill = render::scene::Fill::from_name(&loaded.fill).unwrap_or(render::scene::Fill::Blocks);
-    let mut show_chrome = true;
+    let mut representation = initial_render_options.representation;
+    let mut fill = initial_render_options.fill;
+    let mut show_chrome = initial_render_options.chrome;
     let mut screensaver = screensaver_start;
     let mut saver_angle: f32 = 0.0;
     let mut selected = world.find_body("Earth").unwrap_or(1).min(world.bodies.len() - 1);
     let mut steps_per_frame: u32 = world.substeps.max(1);
     let mut paused = false;
-    let mut trace_mode = TraceMode::Compact;
+    let mut trace_mode = initial_trace_mode;
     // Panel override: the load trace, then any command result, shown until the
     // user next changes selection or trace mode.
-    let mut panel_override = Some(trace::load_lines(loaded.v_com, world.bodies.len()));
+    let mut panel_override = show_on_load
+        .then(|| trace::load_lines(loaded.v_com, world.bodies.len()));
     // When Some, we're typing a `:` command; holds the buffer.
     let mut command_buf: Option<String> = None;
     // One-line feedback (errors / confirmations) shown on the status bar.
@@ -132,9 +145,10 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                         None => status_msg = Some(format!("unknown view '{}'", arg.trim())),
                                     }
                                 } else {
+                                    let is_spawn = line.trim_start().starts_with("spawn");
                                     match command::execute(&mut world, selected, &line) {
                                         Ok(out) => {
-                                            if let Some(p) = out.panel {
+                                            if let Some(p) = out.panel.filter(|_| !is_spawn || show_on_spawn) {
                                                 panel_override = Some(p);
                                             }
                                             if let Some(s) = out.select {
@@ -158,16 +172,16 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                             command_buf = Some(String::new());
                             status_msg = None;
                         }
-                        KeyCode::Char('w') => cam.move_forward(1.0),
-                        KeyCode::Char('s') => cam.move_forward(-1.0),
-                        KeyCode::Char('a') => cam.move_right(-1.0),
-                        KeyCode::Char('d') => cam.move_right(1.0),
-                        KeyCode::Char('r') => cam.move_up(1.0),
-                        KeyCode::Char('f') => cam.move_up(-1.0),
-                        KeyCode::Left => cam.turn(-0.08, 0.0),
-                        KeyCode::Right => cam.turn(0.08, 0.0),
-                        KeyCode::Up => cam.turn(0.0, 0.08),
-                        KeyCode::Down => cam.turn(0.0, -0.08),
+                        KeyCode::Char('w') => render_session.camera.move_forward(1.0),
+                        KeyCode::Char('s') => render_session.camera.move_forward(-1.0),
+                        KeyCode::Char('a') => render_session.camera.move_right(-1.0),
+                        KeyCode::Char('d') => render_session.camera.move_right(1.0),
+                        KeyCode::Char('r') => render_session.camera.move_up(1.0),
+                        KeyCode::Char('f') => render_session.camera.move_up(-1.0),
+                        KeyCode::Left => render_session.camera.turn(-0.08, 0.0),
+                        KeyCode::Right => render_session.camera.turn(0.08, 0.0),
+                        KeyCode::Up => render_session.camera.turn(0.0, 0.08),
+                        KeyCode::Down => render_session.camera.turn(0.0, -0.08),
                         KeyCode::Char(' ') => {
                             paused = !paused;
                             // Resuming live from a rewound point branches the
@@ -261,7 +275,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                     if let MouseEventKind::Down(MouseButton::Right) = me.kind {
                         // Right-click: open the details card for the nearest body
                         // (or close it if the click missed everything).
-                        match render::scene::pick(&cam, &world, scale_mode, representation, selected, tw, th, me.column, me.row) {
+                        match render::scene::pick(&render_session.camera, &world, scale_mode, representation, selected, tw, th, me.column, me.row) {
                             Some(i) => {
                                 details = Some(i);
                                 selected = i;
@@ -273,7 +287,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 Event::Resize(nw, nh) => {
                     tw = nw;
                     th = nh;
-                    fb.resize(nw, nh);
+                    render_session.resize(nw, nh);
                 }
                 _ => {}
             }
@@ -334,23 +348,27 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
         if screensaver {
             saver_angle += 0.004;
             let (r, height) = (24.0, 10.0);
-            cam = Camera::looking_at_origin(Vec3::new(
+            render_session.camera = Camera::looking_at_origin(Vec3::new(
                 r * saver_angle.cos(),
                 height,
                 r * saver_angle.sin(),
             ));
         } else if representation.is_topdown() {
-            cam = Camera::looking_at(Vec3::new(0.01, 26.0, 0.0), Vec3::ZERO);
+            render_session.camera = Camera::looking_at(Vec3::new(0.01, 26.0, 0.0), Vec3::ZERO);
         }
 
         // --- render ---
-        fb.clear();
-        render::scene::render(&mut fb, &cam, &world, selected, &stars, scale_mode, representation, world.time, fill, show_chrome);
-        fb.composite_pixels();
-        fb.composite_braille();
+        render_session.options = RenderOptions {
+            scale: scale_mode,
+            representation,
+            fill,
+            chrome: show_chrome,
+        };
+        render_session.render_scene(&world, selected);
         if !screensaver && show_chrome {
+            let fb = render_session.framebuffer_mut();
             draw_hud(
-                &mut fb,
+                fb,
                 &world,
                 selected,
                 paused,
@@ -364,11 +382,11 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 status_msg.as_deref(),
             );
             if let Some(i) = details {
-                draw_details(&mut fb, &world, i);
+                draw_details(fb, &world, i);
             }
         }
-        terminal::flush(&fb)?;
-        fb.swap();
+        terminal::flush(render_session.framebuffer())?;
+        render_session.framebuffer_mut().swap();
 
         if let Some(rem) = frame.checked_sub(t0.elapsed()) {
             std::thread::sleep(rem);

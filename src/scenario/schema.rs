@@ -77,7 +77,7 @@ pub struct Render {
     pub scale: String,
     #[serde(default = "default_trail")]
     pub trail_length: usize,
-    #[serde(default)]
+    #[serde(default = "default_show_labels")]
     pub show_labels: bool,
     #[serde(default = "default_fill")]
     pub fill: String,
@@ -96,6 +96,9 @@ fn default_fill() -> String {
 }
 fn default_representation() -> String {
     "heliocentric".into()
+}
+fn default_show_labels() -> bool {
+    true
 }
 
 impl Default for Render {

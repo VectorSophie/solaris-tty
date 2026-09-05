@@ -68,9 +68,9 @@ fn check() -> Result<()> {
 /// — no live terminal needed. Args: `--record <file> [frames] [scene=<name>]`.
 fn record(path: &str) -> Result<()> {
     use glam::Vec3;
-    use solaris_tty::render::scale::{world_to_render, ScaleMode};
-    use solaris_tty::render::scene::Representation;
-    use solaris_tty::render::{camera::Camera, scene, starfield, FrameBuffer};
+    use solaris_tty::render::scale::world_to_render;
+    use solaris_tty::render::session::{RenderOptions, RenderSession};
+    use solaris_tty::render::Camera;
 
     let args: Vec<String> = std::env::args().collect();
     let frames = args.iter().filter_map(|a| a.parse::<usize>().ok()).next().unwrap_or(300).clamp(1, 1200);
@@ -81,16 +81,17 @@ fn record(path: &str) -> Result<()> {
 
     let (w, h) = (100u16, 38u16);
     let loaded = solaris_tty::scenario::load_builtin(&name)?;
+    let options = RenderOptions::from_loaded(&loaded);
     let mut world = loaded.world;
-    let mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
+    let mode = options.scale;
     let extent = world
         .bodies
         .iter()
         .map(|b| world_to_render(mode, b.pos).length())
         .fold(0.0f32, f32::max)
         .max(2.0);
-    let stars = starfield::generate(500);
-    let mut fb = FrameBuffer::new(w, h);
+    let initial_camera = Camera::looking_at_origin(Vec3::new(0.0, extent, extent));
+    let mut session = RenderSession::new(w, h, initial_camera, options, 500);
 
     let mut out = format!(
         "{{\"version\":2,\"width\":{w},\"height\":{h},\"env\":{{\"TERM\":\"xterm-256color\"}}}}\n"
@@ -101,23 +102,28 @@ fn record(path: &str) -> Result<()> {
     let focus = world.find_body("Earth").unwrap_or(1);
     for i in 0..frames {
         let ang = i as f32 * 0.012;
-        let cam = Camera::looking_at(
+        session.camera = Camera::looking_at(
             Vec3::new(extent * 1.5 * ang.cos(), extent * 1.0, extent * 1.5 * ang.sin()),
             Vec3::ZERO,
         );
-        world.substeps = 240;
-        world.advance();
-        world.record_trails(1000);
+        let _ = world.advance();
+        world.record_trails(loaded.trail_length);
 
-        fb.clear();
-        scene::render(&mut fb, &cam, &world, focus, &stars, mode, Representation::Heliocentric, world.time, scene::Fill::Blocks, true);
-        fb.composite_pixels();
-        fb.composite_braille();
+        session.render_scene(&world, focus);
         let caption = format!(" solaris-tty · {name} · t={:.0}d ", world.time / 86400.0);
-        fb.write_str(0, h - 1, &caption, crossterm::style::Color::White, crossterm::style::Color::DarkGrey);
+        session.framebuffer_mut().write_str(
+            0,
+            h - 1,
+            &caption,
+            crossterm::style::Color::White,
+            crossterm::style::Color::DarkGrey,
+        );
 
         let t = i as f64 * dt;
-        out.push_str(&format!("[{t:.2}, \"o\", \"{}\"]\n", json_escape(&fb.to_ansi())));
+        out.push_str(&format!(
+            "[{t:.2}, \"o\", \"{}\"]\n",
+            json_escape(&session.framebuffer().to_ansi())
+        ));
     }
     std::fs::write(path, &out)?;
     println!("wrote {frames} frames ({name}) to {path}");
@@ -146,126 +152,46 @@ fn json_escape(s: &str) -> String {
 /// Render a single frame to a plain-text grid on stdout (headless check).
 fn frame() -> Result<()> {
     use glam::Vec3;
-    use solaris_tty::render::scale::ScaleMode;
-    use solaris_tty::render::{camera::Camera, scene, FrameBuffer};
+    use solaris_tty::render::scale::{world_to_render, ScaleMode};
+    use solaris_tty::render::scene::{Fill, Representation};
+    use solaris_tty::render::session::{RenderOptions, RenderSession};
+    use solaris_tty::render::Camera;
 
-    let mode = std::env::args()
-        .find_map(|a| ScaleMode::from_name(&a))
-        .unwrap_or(ScaleMode::Compressed);
     let scene_name = std::env::args()
         .find_map(|a| a.strip_prefix("scene=").map(String::from))
         .unwrap_or_else(|| "solar".into());
     let loaded = solaris_tty::scenario::load_builtin(&scene_name)?;
+    let mut options = RenderOptions::from_loaded(&loaded);
+    for argument in std::env::args() {
+        if let Some(scale) = ScaleMode::from_name(&argument) {
+            options.scale = scale;
+        }
+        if let Some(representation) = Representation::from_name(&argument) {
+            options.representation = representation;
+        }
+        if let Some(fill) = Fill::from_name(&argument) {
+            options.fill = fill;
+        }
+    }
     let mut world = loaded.world;
     // Build up some trail history.
     for _ in 0..220 {
-        world.advance();
-        world.record_trails(400);
+        let _ = world.advance();
+        world.record_trails(loaded.trail_length);
     }
-    let mut fb = FrameBuffer::new(120, 40);
     // Optional `focus=<Body>` arg to zoom in on a body (e.g. to see rings).
     let focus = std::env::args().find_map(|a| a.strip_prefix("focus=").map(String::from));
     let cam = match focus.as_deref().and_then(|n| world.find_body(n)) {
         Some(i) => {
-            use solaris_tty::render::scale::world_to_render;
-            let c = world_to_render(mode, world.bodies[i].pos);
+            let c = world_to_render(options.scale, world.bodies[i].pos);
             Camera::looking_at(c + Vec3::new(0.0, 0.8, 2.2), c)
         }
         None => Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0)),
     };
-    let stars = solaris_tty::render::starfield::generate(500);
-    fb.clear();
-    // Optional representation via arg name.
-    let rep = std::env::args()
-        .find_map(|a| match a.as_str() {
-            "geocentric" => Some(scene::Representation::Geocentric),
-            "helical" => Some(scene::Representation::Helical),
-            "synodic" | "co-rotating" => Some(scene::Representation::Synodic),
-            "topdown" | "top-down" => Some(scene::Representation::TopDown),
-            "vortex" => Some(scene::Representation::Vortex),
-            _ => None,
-        })
-        .unwrap_or(scene::Representation::Heliocentric);
-    scene::render(
-        &mut fb,
-        &cam,
-        &world,
-        world.find_body("Earth").unwrap_or(1),
-        &stars,
-        mode,
-        rep,
-        world.time,
-        scene::Fill::Blocks,
-        true,
-    );
-    fb.composite_pixels();
-    fb.composite_braille();
-    print!("{}", fb.to_text());
+    let selected = world.find_body("Earth").unwrap_or(1);
+    let mut session = RenderSession::new(120, 40, cam, options, 500);
+    print!("{}", session.render_text(&world, selected));
 
-    // Demo the details card (right-click inspection) headlessly.
-    println!("\n── details card: Saturn ──");
-    if let Some(i) = world.find_body("Saturn") {
-        for l in solaris_tty::trace::details_lines(&world, i) {
-            println!("  {l}");
-        }
-    }
-
-    // Demo the decay trace: give a body a periapsis inside the Sun.
-    println!("\n── decay trace ──");
-    {
-        use solaris_tty::sim::body::{Body, Kind};
-        let mut grazer = Body::new("Grazer", Kind::Planet, 1.0e22, 5.0e5);
-        // Near 1 AU but aimed almost straight at the Sun (tiny tangential speed).
-        grazer.pos = [1.495978707e11, 0.0, 0.0];
-        grazer.vel = [0.0, 2.0e3, 0.0]; // well below circular ⇒ plunging orbit
-        let gi = world.add_body(grazer);
-        for l in solaris_tty::trace::surface_intersection_lines(&world, gi) {
-            println!("  {l}");
-        }
-    }
-
-    // Demo the :set edit trace: push Mars past escape velocity.
-    println!("\n$ :set Mars vel=0,50km/s,0\n");
-    if let Some(mars) = world.find_body("Mars") {
-        match solaris_tty::command::execute(&mut world, mars, "set Mars vel=0,50km/s,0") {
-            Ok(out) => {
-                for l in out.panel.unwrap_or_default() {
-                    println!("  {l}");
-                }
-            }
-            Err(e) => println!("  error: {e}"),
-        }
-    }
-
-    // Demo a collision trace headlessly: drop an impactor onto Earth.
-    println!("\n── collision trace ──");
-    if let Some(ei) = world.find_body("Earth") {
-        use solaris_tty::sim::body::{Body, Kind};
-        let mut impactor = Body::new("Impactor", Kind::Planet, 3.0e23, 2.0e6);
-        impactor.pos = world.bodies[ei].pos;
-        impactor.vel = [world.bodies[ei].vel[0] + 1.5e4, world.bodies[ei].vel[1], world.bodies[ei].vel[2]];
-        world.add_body(impactor);
-        if let Some(c) = world.advance().into_iter().next() {
-            for l in solaris_tty::trace::collision_lines(&c) {
-                println!("  {l}");
-            }
-        }
-    }
-
-    // Demo the spawn trace (the signature feature) headlessly.
-    println!("\n$ :spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0\n");
-    match solaris_tty::command::execute(
-        &mut world,
-        0,
-        "spawn name=Theia mass=6.4e23 pos=0.98au,0,0 vel=0,31km/s,0",
-    ) {
-        Ok(out) => {
-            for l in out.panel.unwrap_or_default() {
-                println!("  {l}");
-            }
-        }
-        Err(e) => println!("  error: {e}"),
-    }
     Ok(())
 }
 

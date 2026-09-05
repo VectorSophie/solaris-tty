@@ -18,6 +18,7 @@ fn fill_name_from_name_cycle_roundtrip() {
 use glam::Vec3;
 use solaris_tty::render::scale::{sim_point_to_render, sim_vector_to_render, ScaleMode};
 use solaris_tty::render::scene::{self, Representation};
+use solaris_tty::render::session::RenderOptions;
 use solaris_tty::render::{camera::Camera, FrameBuffer};
 use solaris_tty::SOLAR_TOML;
 
@@ -30,9 +31,17 @@ fn render_to_text(fill: Fill, show_chrome: bool) -> String {
     let sun = world.find_body("Sun").unwrap();
     fb.clear();
     scene::render(
-        &mut fb, &cam, &world, sun, &stars,
-        ScaleMode::Compressed, Representation::Heliocentric, world.time,
-        fill, show_chrome,
+        &mut fb,
+        &cam,
+        &world,
+        sun,
+        &stars,
+        RenderOptions {
+            scale: ScaleMode::Compressed,
+            representation: Representation::Heliocentric,
+            fill,
+            chrome: show_chrome,
+        },
     );
     fb.composite_pixels();
     fb.composite_braille();
@@ -94,7 +103,19 @@ fn helical_and_vortex_render_differently() {
         let stars = solaris_tty::render::starfield::generate(0);
         let cam = Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
         fb.clear();
-        scene::render(&mut fb, &cam, &world, 0, &stars, ScaleMode::Compressed, rep, world.time, Fill::Blocks, false);
+        scene::render(
+            &mut fb,
+            &cam,
+            &world,
+            0,
+            &stars,
+            RenderOptions {
+                scale: ScaleMode::Compressed,
+                representation: rep,
+                fill: Fill::Blocks,
+                chrome: false,
+            },
+        );
         fb.composite_pixels();
         fb.composite_braille();
         fb.to_text()
@@ -118,5 +139,33 @@ fn representation_axes_have_declared_ecliptic_angles() {
     assert!(
         (angle_to_plane - 60.0).abs() < 0.05,
         "helix angle to ecliptic plane = {angle_to_plane} degrees"
+    );
+}
+
+#[test]
+fn render_options_resolve_from_loaded_scenario() {
+    use solaris_tty::render::session::RenderOptions;
+
+    let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
+    let options = RenderOptions::from_loaded(&loaded);
+    assert_eq!(options.scale, ScaleMode::Compressed);
+    assert_eq!(options.representation, Representation::Heliocentric);
+    assert_eq!(options.fill, Fill::Blocks);
+    assert!(options.chrome);
+}
+
+#[test]
+fn render_sessions_are_deterministic_for_equal_inputs() {
+    use solaris_tty::render::session::{RenderOptions, RenderSession};
+
+    let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
+    let options = RenderOptions::from_loaded(&loaded);
+    let camera = || Camera::looking_at_origin(Vec3::new(0.0, 16.0, 11.0));
+    let mut first = RenderSession::new(80, 24, camera(), options, 0);
+    let mut second = RenderSession::new(80, 24, camera(), options, 0);
+
+    assert_eq!(
+        first.render_text(&loaded.world, 0),
+        second.render_text(&loaded.world, 0)
     );
 }

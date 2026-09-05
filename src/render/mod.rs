@@ -5,6 +5,7 @@ pub mod cell;
 pub mod framebuffer;
 pub mod scale;
 pub mod scene;
+pub mod session;
 pub mod starfield;
 pub mod terminal;
 

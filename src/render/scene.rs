@@ -11,6 +11,7 @@ use glam::{Mat4, Vec3, Vec4};
 use super::camera::Camera;
 use super::framebuffer::FrameBuffer;
 use super::scale::{render_radius, sim_vector_to_render, world_to_render, ScaleMode};
+use super::session::RenderOptions;
 use super::starfield::Star;
 use crate::sim::body::Kind;
 use crate::sim::World;
@@ -197,12 +198,15 @@ pub fn render(
     world: &World,
     selected: usize,
     stars: &[Star],
-    mode: ScaleMode,
-    rep: Representation,
-    now: f64,
-    fill: Fill,
-    show_chrome: bool,
+    options: RenderOptions,
 ) {
+    let RenderOptions {
+        scale: mode,
+        representation: rep,
+        fill,
+        chrome: show_chrome,
+    } = options;
+    let now = world.time;
     let (w, h) = fb.size();
     let (wf, phf) = (w as f32, (h as u16 * 2) as f32);
     let aspect = (w as f32 / h as f32) * 0.5; // pixels are square in this layer

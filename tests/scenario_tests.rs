@@ -41,6 +41,7 @@ orbital_velocity = 0.0
 "#;
     let loaded = solaris_tty::scenario::from_str(src).unwrap();
     assert_eq!(loaded.fill, "ascii");
+    assert!(loaded.show_labels);
     // Omitted → defaults to blocks (solar.toml sets no fill).
     let solar = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
     assert_eq!(solar.fill, "blocks");
