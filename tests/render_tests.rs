@@ -11,7 +11,9 @@ fn fill_name_from_name_cycle_roundtrip() {
     assert_eq!(Fill::Blocks.name(), "blocks");
     // cycle visits all three and returns home.
     let mut f = Fill::Blocks;
-    f = f.cycle(); f = f.cycle(); f = f.cycle();
+    f = f.cycle();
+    f = f.cycle();
+    f = f.cycle();
     assert_eq!(f, Fill::Blocks);
 }
 
@@ -72,15 +74,23 @@ fn chrome_off_hides_body_labels() {
     let with = render_to_text(Fill::Blocks, true);
     let without = render_to_text(Fill::Blocks, false);
     assert!(with.contains("Sun"), "label expected with chrome on");
-    assert!(!without.contains("Sun"), "no labels expected with chrome off");
+    assert!(
+        !without.contains("Sun"),
+        "no labels expected with chrome off"
+    );
 }
 
 #[test]
 fn representation_from_name_cycle_includes_vortex() {
-    assert_eq!(Representation::from_name("vortex"), Some(Representation::Vortex));
+    assert_eq!(
+        Representation::from_name("vortex"),
+        Some(Representation::Vortex)
+    );
     assert_eq!(Representation::Vortex.name(), "vortex");
     let mut r = Representation::Heliocentric;
-    for _ in 0..6 { r = r.cycle(); }
+    for _ in 0..6 {
+        r = r.cycle();
+    }
     assert_eq!(r, Representation::Heliocentric);
 }
 
@@ -125,7 +135,10 @@ fn helical_and_vortex_render_differently() {
 
 #[test]
 fn coordinate_mapping_puts_ecliptic_north_up() {
-    assert_eq!(sim_point_to_render([1.0, 2.0, 3.0]), Vec3::new(1.0, 3.0, 2.0));
+    assert_eq!(
+        sim_point_to_render([1.0, 2.0, 3.0]),
+        Vec3::new(1.0, 3.0, 2.0)
+    );
     assert_eq!(sim_vector_to_render([0.0, 0.0, 1.0]), Vec3::Y);
 }
 

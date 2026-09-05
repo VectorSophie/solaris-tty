@@ -4,7 +4,7 @@
 use solaris_tty::sim::body::{vec_len, vec_sub, Body, Kind};
 use solaris_tty::sim::diagnostics::total_momentum;
 use solaris_tty::sim::orbit::{elements, Class};
-use solaris_tty::sim::units::{AU, GM_SUN, G, M_SUN};
+use solaris_tty::sim::units::{AU, G, GM_SUN, M_SUN};
 use solaris_tty::sim::World;
 
 /// Sun + one body on a circular orbit at `au` with speed factor `k` × v_circular.
@@ -68,20 +68,32 @@ fn barycentric_correction_zeroes_momentum() {
     let after = vec_len(total_momentum(&world.bodies));
     // Exactly zero in real arithmetic; residual is f64 rounding on ~1e30 kg
     // masses, so compare relative to the pre-correction momentum magnitude.
-    assert!(after / before < 1e-12, "residual momentum {after} vs {before}");
+    assert!(
+        after / before < 1e-12,
+        "residual momentum {after} vs {before}"
+    );
 }
 
 #[test]
 fn vis_viva_holds_for_circular_orbit() {
     let world = sun_and_body(1.0, 1.0);
-    let e = elements(&world.bodies[1], world.bodies[0].pos, world.bodies[0].vel, GM_SUN);
+    let e = elements(
+        &world.bodies[1],
+        world.bodies[0].pos,
+        world.bodies[0].vel,
+        GM_SUN,
+    );
     // Circular: v² should equal mu/r, and vis-viva v² = mu(2/r − 1/a).
     let visviva = e.mu * (2.0 / e.r - 1.0 / e.semi_major_axis);
     let rel = ((e.speed * e.speed) - visviva).abs() / (e.speed * e.speed);
     assert!(rel < 1e-9, "vis-viva mismatch: {rel}");
     assert_eq!(e.class, Class::Bound);
     // Earth's circular velocity at 1 AU ≈ 29.78 km/s.
-    assert!((e.v_circular - 29_780.0).abs() < 100.0, "v_c = {}", e.v_circular);
+    assert!(
+        (e.v_circular - 29_780.0).abs() < 100.0,
+        "v_c = {}",
+        e.v_circular
+    );
 }
 
 #[test]
@@ -99,13 +111,25 @@ fn kepler_circular_orbit_matches_vis_viva() {
     let a = AU;
     // e=0, i=30°, M=90° (a quarter-orbit past the node, so off the node line):
     // circular speed √(mu/a), and the inclination lifts it out of the plane.
-    let (pos, vel) = state_from_elements(mu, a, 0.0, 30f64.to_radians(), 0.0, 0.0, std::f64::consts::FRAC_PI_2);
+    let (pos, vel) = state_from_elements(
+        mu,
+        a,
+        0.0,
+        30f64.to_radians(),
+        0.0,
+        0.0,
+        std::f64::consts::FRAC_PI_2,
+    );
     let r = vec_len(pos);
     let v = vec_len(vel);
     assert!((r - a).abs() / a < 1e-9, "r = {r}");
     assert!((v - (mu / a).sqrt()).abs() / v < 1e-9, "v = {v}");
     // z ≈ a·sin(i) here.
-    assert!((pos[2] - a * 30f64.to_radians().sin()).abs() / a < 1e-9, "z = {}", pos[2]);
+    assert!(
+        (pos[2] - a * 30f64.to_radians().sin()).abs() / a < 1e-9,
+        "z = {}",
+        pos[2]
+    );
 }
 
 #[test]
@@ -120,7 +144,10 @@ fn snapshot_restore_roundtrips() {
     for _ in 0..200 {
         w.advance();
     }
-    assert!(w.time > t && w.bodies[1].pos != pos, "state should have moved on");
+    assert!(
+        w.time > t && w.bodies[1].pos != pos,
+        "state should have moved on"
+    );
     w.restore(&snap);
     assert_eq!(w.time, t);
     assert_eq!(w.bodies[1].pos, pos, "restore returns exact position");
@@ -151,14 +178,23 @@ fn collision_merges_and_conserves_momentum() {
         assert!((p_after[k] - p_before[k]).abs() < 1e15, "momentum axis {k}");
     }
     // Merged speed = |Σmv|/Σm = 5e26 / 1.5e24 ≈ 333.3 m/s.
-    assert!((c.merged_speed - 333.33).abs() < 1.0, "v = {}", c.merged_speed);
+    assert!(
+        (c.merged_speed - 333.33).abs() < 1.0,
+        "v = {}",
+        c.merged_speed
+    );
 }
 
 #[test]
 fn fast_body_is_hyperbolic() {
     // 1.5 × circular speed exceeds escape (√2 ≈ 1.414 × circular).
     let world = sun_and_body(1.0, 1.5);
-    let e = elements(&world.bodies[1], world.bodies[0].pos, world.bodies[0].vel, GM_SUN);
+    let e = elements(
+        &world.bodies[1],
+        world.bodies[0].pos,
+        world.bodies[0].vel,
+        GM_SUN,
+    );
     assert_eq!(e.class, Class::Hyperbolic);
     assert!(e.specific_energy > 0.0);
 }
@@ -191,7 +227,10 @@ fn gr_term_matches_circular_orbit_ratio() {
     // For a circular orbit the tangential term vanishes and |a_GR|/|a_N| = 3GM/(c²r).
     let expected = 3.0 * mu / (C_LIGHT * C_LIGHT * r);
     let ratio = a_gr / a_newt;
-    assert!((ratio - expected).abs() / expected < 1e-6, "ratio {ratio:e} vs {expected:e}");
+    assert!(
+        (ratio - expected).abs() / expected < 1e-6,
+        "ratio {ratio:e} vs {expected:e}"
+    );
     // Source (Sun) gets no GR contribution here.
     assert_eq!(acc[0], [0.0, 0.0, 0.0]);
 }
@@ -303,20 +342,24 @@ fn roche_lines_fire_inside_limit_only() {
     use solaris_tty::trace::roche_lines;
 
     let mut primary = Body::new("P", Kind::Planet, 6.0e24, 6.4e6); // ~3.7e3 kg/m³
-    let mut moon = Body::new("m", Kind::Moon, 9.95e20, 5.0e5);      // ~1.9e3 kg/m³
+    let mut moon = Body::new("m", Kind::Moon, 9.95e20, 5.0e5); // ~1.9e3 kg/m³
     primary.pos = [0.0, 0.0, 0.0];
     moon.pos = [1.0e7, 0.0, 0.0]; // inside the limit for these densities
     let world_in = World::new(vec![primary.clone(), moon.clone()], G, 1.0, 1, 0.0);
     let inside = roche_lines(&world_in, 1, 0);
     assert!(!inside.is_empty());
-    assert!(inside.iter().any(|l| l.contains("inside") || l.contains("break")));
+    assert!(inside
+        .iter()
+        .any(|l| l.contains("inside") || l.contains("break")));
 
     let mut moon_far = moon.clone();
     // d_roche for these densities works out to ~2.2e9 m; go well beyond it.
     moon_far.pos = [1.0e10, 0.0, 0.0];
     let world_out = World::new(vec![primary, moon_far], G, 1.0, 1, 0.0);
     let outside = roche_lines(&world_out, 1, 0);
-    assert!(outside.iter().any(|l| l.contains("outside") || l.contains("safe")));
+    assert!(outside
+        .iter()
+        .any(|l| l.contains("outside") || l.contains("safe")));
 }
 
 #[test]

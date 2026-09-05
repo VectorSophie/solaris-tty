@@ -30,7 +30,13 @@ impl FrameBuffer {
             width,
             height,
             current: vec![Cell::EMPTY; n],
-            previous: vec![Cell { ch: '\x01', ..Cell::EMPTY }; n],
+            previous: vec![
+                Cell {
+                    ch: '\x01',
+                    ..Cell::EMPTY
+                };
+                n
+            ],
             px_color: vec![Color::Reset; pn],
             px_depth: vec![0.0; pn],
             braille_mask: vec![0; n],
@@ -130,7 +136,16 @@ impl FrameBuffer {
             if cx >= self.width as usize || y >= self.height {
                 break;
             }
-            self.write_overlay(cx as u16, y, Cell { ch, fg, bg, depth: f32::MAX });
+            self.write_overlay(
+                cx as u16,
+                y,
+                Cell {
+                    ch,
+                    fg,
+                    bg,
+                    depth: f32::MAX,
+                },
+            );
         }
     }
 
@@ -191,13 +206,16 @@ impl FrameBuffer {
 
     pub fn dirty_iter(&self) -> impl Iterator<Item = (u16, u16, &Cell)> {
         let width = self.width as usize;
-        self.current.iter().enumerate().filter_map(move |(idx, cell)| {
-            if cell != &self.previous[idx] {
-                Some(((idx % width) as u16, (idx / width) as u16, cell))
-            } else {
-                None
-            }
-        })
+        self.current
+            .iter()
+            .enumerate()
+            .filter_map(move |(idx, cell)| {
+                if cell != &self.previous[idx] {
+                    Some(((idx % width) as u16, (idx / width) as u16, cell))
+                } else {
+                    None
+                }
+            })
     }
 
     pub fn swap(&mut self) {

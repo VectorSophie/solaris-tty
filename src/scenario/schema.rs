@@ -163,15 +163,15 @@ pub struct BodySpec {
 
     /// Descriptive physical data for the details card (no effect on physics).
     #[serde(default)]
-    pub axial_tilt: Option<f64>,     // degrees
+    pub axial_tilt: Option<f64>, // degrees
     #[serde(default)]
     pub rotation_hours: Option<f64>, // sidereal, negative = retrograde
     #[serde(default)]
-    pub ring_inner: Option<f64>,     // ring inner radius / body radius
+    pub ring_inner: Option<f64>, // ring inner radius / body radius
     #[serde(default)]
     pub ring_outer: Option<f64>,
     #[serde(default)]
-    pub about: Option<String>,       // one-line description
+    pub about: Option<String>, // one-line description
 }
 
 fn default_kind() -> String {

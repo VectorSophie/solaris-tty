@@ -27,9 +27,9 @@ pub fn accelerations(bodies: &[Body], g: f64, softening: f64) -> Vec<[f64; 3]> {
             // a_i gains +G m_j d / r^3 ; a_j gains the negative (Newton's 3rd).
             let s_i = g * bodies[j].mass * inv_r3;
             let s_j = g * bodies[i].mass * inv_r3;
-            for k in 0..3 {
-                acc[i][k] += s_i * d[k];
-                acc[j][k] -= s_j * d[k];
+            for (k, component) in d.iter().enumerate() {
+                acc[i][k] += s_i * component;
+                acc[j][k] -= s_j * component;
             }
         }
     }
@@ -39,7 +39,8 @@ pub fn accelerations(bodies: &[Body], g: f64, softening: f64) -> Vec<[f64; 3]> {
 /// Add the first-order post-Newtonian (Schwarzschild) correction from body
 /// `source` onto each `target`'s acceleration, in place. This is the restricted
 /// 1PN term (source recoil omitted — O(m_target/M)); it reproduces Mercury's
-/// ~42.98″/century perihelion advance.
+/// The corresponding analytic two-body formula gives ~42.98″/century for
+/// Mercury; integrated secular precession is not asserted here.
 ///
 ///   a_GR = (GM/c²r³)·[ (4GM/r − v²)·r_vec + 4(r_vec·v)·v_vec ]
 ///
@@ -86,11 +87,7 @@ pub fn add_gr_accelerations(
 /// Index of the body producing the strongest instantaneous acceleration on
 /// `target`, or None if it is the only body. This is not an orbital-parent
 /// inference: hierarchical systems can orbit a weaker nearby source.
-pub fn strongest_acceleration_source(
-    bodies: &[Body],
-    target: usize,
-    g: f64,
-) -> Option<usize> {
+pub fn strongest_acceleration_source(bodies: &[Body], target: usize, g: f64) -> Option<usize> {
     let mut best = None;
     let mut best_a = 0.0;
     for j in 0..bodies.len() {

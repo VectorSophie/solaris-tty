@@ -4,7 +4,9 @@ use std::collections::{HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind};
+use crossterm::event::{
+    self, Event, KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind,
+};
 use crossterm::style::Color;
 use glam::Vec3;
 
@@ -68,14 +70,17 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     let mut show_chrome = initial_render_options.chrome;
     let mut screensaver = screensaver_start;
     let mut saver_angle: f32 = 0.0;
-    let mut selected = world.find_body("Earth").unwrap_or(1).min(world.bodies.len() - 1);
+    let mut selected = world
+        .find_body("Earth")
+        .unwrap_or(1)
+        .min(world.bodies.len() - 1);
     let mut steps_per_frame: u32 = world.substeps.max(1);
     let mut paused = false;
     let mut trace_mode = initial_trace_mode;
     // Panel override: the load trace, then any command result, shown until the
     // user next changes selection or trace mode.
-    let mut panel_override = show_on_load
-        .then(|| trace::load_lines(loaded.v_com, world.bodies.len()));
+    let mut panel_override =
+        show_on_load.then(|| trace::load_lines(loaded.v_com, world.bodies.len()));
     // When Some, we're typing a `:` command; holds the buffer.
     let mut command_buf: Option<String> = None;
     // One-line feedback (errors / confirmations) shown on the status bar.
@@ -101,9 +106,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
         while event::poll(Duration::ZERO)? {
             match event::read()? {
                 Event::Key(k) if k.kind != KeyEventKind::Release => {
-                    if k.modifiers.contains(KeyModifiers::CONTROL)
-                        && k.code == KeyCode::Char('c')
-                    {
+                    if k.modifiers.contains(KeyModifiers::CONTROL) && k.code == KeyCode::Char('c') {
                         return Ok(());
                     }
                     // --- command-line mode: capture typing ---
@@ -123,7 +126,10 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                             scale_mode = m;
                                             status_msg = Some(format!("scale: {}", m.name()));
                                         }
-                                        None => status_msg = Some(format!("unknown scale '{}'", arg.trim())),
+                                        None => {
+                                            status_msg =
+                                                Some(format!("unknown scale '{}'", arg.trim()))
+                                        }
                                     }
                                 } else if let Some(arg) = line.trim().strip_prefix("render ") {
                                     match render::scene::Fill::from_name(arg.trim()) {
@@ -131,7 +137,10 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                             fill = f;
                                             status_msg = Some(format!("fill: {}", f.name()));
                                         }
-                                        None => status_msg = Some(format!("unknown fill '{}'", arg.trim())),
+                                        None => {
+                                            status_msg =
+                                                Some(format!("unknown fill '{}'", arg.trim()))
+                                        }
                                     }
                                 } else if let Some(arg) = line.trim().strip_prefix("view ") {
                                     match render::scene::Representation::from_name(arg.trim()) {
@@ -142,13 +151,18 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                                 panel_override = Some(p);
                                             }
                                         }
-                                        None => status_msg = Some(format!("unknown view '{}'", arg.trim())),
+                                        None => {
+                                            status_msg =
+                                                Some(format!("unknown view '{}'", arg.trim()))
+                                        }
                                     }
                                 } else {
                                     let is_spawn = line.trim_start().starts_with("spawn");
                                     match command::execute(&mut world, selected, &line) {
                                         Ok(out) => {
-                                            if let Some(p) = out.panel.filter(|_| !is_spawn || show_on_spawn) {
+                                            if let Some(p) =
+                                                out.panel.filter(|_| !is_spawn || show_on_spawn)
+                                            {
                                                 panel_override = Some(p);
                                             }
                                             if let Some(s) = out.select {
@@ -230,7 +244,9 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                 roched = roche_names(&world);
                             }
                         }
-                        KeyCode::Char(']') => steps_per_frame = (steps_per_frame + steps_per_frame / 2 + 1).min(4000),
+                        KeyCode::Char(']') => {
+                            steps_per_frame = (steps_per_frame + steps_per_frame / 2 + 1).min(4000)
+                        }
                         KeyCode::Char('[') => steps_per_frame = (steps_per_frame * 2 / 3).max(1),
                         KeyCode::Tab => {
                             selected = (selected + 1) % world.bodies.len();
@@ -266,7 +282,10 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                         }
                         KeyCode::Char('l') => {
                             show_chrome = !show_chrome;
-                            status_msg = Some(format!("labels: {}", if show_chrome { "on" } else { "off" }));
+                            status_msg = Some(format!(
+                                "labels: {}",
+                                if show_chrome { "on" } else { "off" }
+                            ));
                         }
                         _ => {}
                     }
@@ -275,7 +294,17 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                     if let MouseEventKind::Down(MouseButton::Right) = me.kind {
                         // Right-click: open the details card for the nearest body
                         // (or close it if the click missed everything).
-                        match render::scene::pick(&render_session.camera, &world, scale_mode, representation, selected, tw, th, me.column, me.row) {
+                        match render::scene::pick(
+                            &render_session.camera,
+                            &world,
+                            scale_mode,
+                            representation,
+                            selected,
+                            tw,
+                            th,
+                            me.column,
+                            me.row,
+                        ) {
                             Some(i) => {
                                 details = Some(i);
                                 selected = i;
@@ -427,7 +456,13 @@ fn draw_hud(
             }
         }
     };
-    let panel_w = lines.iter().map(|l| l.chars().count()).max().unwrap_or(20).max(24) as u16 + 2;
+    let panel_w = lines
+        .iter()
+        .map(|l| l.chars().count())
+        .max()
+        .unwrap_or(20)
+        .max(24) as u16
+        + 2;
     let px = w.saturating_sub(panel_w);
     let sel_color = body_color(&world.bodies[selected].name, world.bodies[selected].kind);
     for (i, line) in lines.iter().enumerate() {
@@ -444,7 +479,16 @@ fn draw_hud(
         return;
     }
     for x in 0..w {
-        fb.write_overlay(x, h - 1, Cell { ch: ' ', fg: Color::Black, bg: Color::DarkGrey, depth: f32::MAX });
+        fb.write_overlay(
+            x,
+            h - 1,
+            Cell {
+                ch: ' ',
+                fg: Color::Black,
+                bg: Color::DarkGrey,
+                depth: f32::MAX,
+            },
+        );
     }
     let bar = if let Some(cmd) = command {
         format!(":{cmd}\u{2588}")
@@ -462,7 +506,11 @@ fn draw_hud(
             world.energy_drift_pct(),
         )
     };
-    let fg = if command.is_some() { Color::Yellow } else { Color::White };
+    let fg = if command.is_some() {
+        Color::Yellow
+    } else {
+        Color::White
+    };
     fb.write_str(0, h - 1, &bar, fg, Color::DarkGrey);
 }
 
@@ -508,7 +556,12 @@ fn after_restore(
     let n = world.bodies.len();
     let sel = selected.min(n.saturating_sub(1));
     let det = details.filter(|&d| d < n);
-    (sel, det, unbound_names(world), surface_intersecting_names(world))
+    (
+        sel,
+        det,
+        unbound_names(world),
+        surface_intersecting_names(world),
+    )
 }
 
 /// Names of bound bodies whose osculating periapsis intersects the combined
@@ -572,7 +625,12 @@ fn adjust_index(idx: &mut usize, removed: usize, survivor: usize) {
 fn draw_details(fb: &mut FrameBuffer, world: &World, i: usize) {
     let (w, h) = fb.size();
     let lines = trace::details_lines(world, i);
-    let inner_w = lines.iter().map(|l| l.chars().count()).max().unwrap_or(20).clamp(24, 40);
+    let inner_w = lines
+        .iter()
+        .map(|l| l.chars().count())
+        .max()
+        .unwrap_or(20)
+        .clamp(24, 40);
     let bw = inner_w as u16 + 2;
     let bh = lines.len() as u16 + 2;
     if w < bw || h < bh + 1 {
@@ -590,11 +648,32 @@ fn draw_details(fb: &mut FrameBuffer, world: &World, i: usize) {
                 (0, c) if c == bw - 1 => '┐',
                 (r, 0) if r == bh - 1 => '└',
                 (r, c) if r == bh - 1 && c == bw - 1 => '┘',
-                (0, _) | (_, 0) => if row == 0 { '─' } else { '│' },
-                (r, c) if r == bh - 1 || c == bw - 1 => if col == bw - 1 { '│' } else { '─' },
+                (0, _) | (_, 0) => {
+                    if row == 0 {
+                        '─'
+                    } else {
+                        '│'
+                    }
+                }
+                (r, c) if r == bh - 1 || c == bw - 1 => {
+                    if col == bw - 1 {
+                        '│'
+                    } else {
+                        '─'
+                    }
+                }
                 _ => ' ',
             };
-            fb.write_overlay(x0 + col, y0 + row, Cell { ch, fg: accent, bg: Color::Reset, depth: f32::MAX });
+            fb.write_overlay(
+                x0 + col,
+                y0 + row,
+                Cell {
+                    ch,
+                    fg: accent,
+                    bg: Color::Reset,
+                    depth: f32::MAX,
+                },
+            );
         }
     }
     for (r, line) in lines.iter().enumerate() {

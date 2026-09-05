@@ -44,7 +44,11 @@ fn set<'a>(
         return Err("usage: set [name] key=value ...".into());
     }
     // `set gr on|off` toggles the world's relativity flag (not a per-body edit).
-    if toks.first().map(|s| s.eq_ignore_ascii_case("gr")).unwrap_or(false) {
+    if toks
+        .first()
+        .map(|s| s.eq_ignore_ascii_case("gr"))
+        .unwrap_or(false)
+    {
         let state = toks.get(1).copied().unwrap_or("");
         let enabled = match state {
             "on" | "true" | "1" => true,
@@ -66,11 +70,21 @@ fn set<'a>(
         let targets = world.gr_targets.clone();
         world.set_relativity(enabled, source, targets);
         let panel = if enabled {
-            trace::gr_lines(world, if selected < world.bodies.len() { selected } else { 0 })
+            trace::gr_lines(
+                world,
+                if selected < world.bodies.len() {
+                    selected
+                } else {
+                    0
+                },
+            )
         } else {
             vec!["Relativity disabled — Newtonian gravity only".into()]
         };
-        return Ok(Outcome { panel: Some(panel), select: None });
+        return Ok(Outcome {
+            panel: Some(panel),
+            select: None,
+        });
     }
     // A leading token without '=' names the target; otherwise edit the selection.
     let (target, kv) = if !toks[0].contains('=') {
@@ -90,7 +104,9 @@ fn set<'a>(
 
     let mut forces_dirty = false;
     for tok in kv {
-        let (key, val) = tok.split_once('=').ok_or_else(|| format!("expected key=value, got '{tok}'"))?;
+        let (key, val) = tok
+            .split_once('=')
+            .ok_or_else(|| format!("expected key=value, got '{tok}'"))?;
         match key {
             "mass" => {
                 let m = parse_scalar(val)?;
@@ -138,7 +154,9 @@ fn spawn<'a>(world: &mut World, parts: impl Iterator<Item = &'a str>) -> Result<
     let mut vel = [0.0; 3];
 
     for tok in parts {
-        let (key, val) = tok.split_once('=').ok_or_else(|| format!("expected key=value, got '{tok}'"))?;
+        let (key, val) = tok
+            .split_once('=')
+            .ok_or_else(|| format!("expected key=value, got '{tok}'"))?;
         match key {
             "name" => name = val.to_string(),
             "kind" => kind = parse_kind(val),
@@ -155,9 +173,8 @@ fn spawn<'a>(world: &mut World, parts: impl Iterator<Item = &'a str>) -> Result<
         return Err("mass must be positive".into());
     }
     // Default radius from mass at a rocky density (~5500 kg/m³) so ρ is sane.
-    let radius = radius.unwrap_or_else(|| {
-        (3.0 * mass / (4.0 * std::f64::consts::PI * 5500.0)).cbrt()
-    });
+    let radius =
+        radius.unwrap_or_else(|| (3.0 * mass / (4.0 * std::f64::consts::PI * 5500.0)).cbrt());
 
     let mut b = Body::new(name, kind, mass, radius);
     b.pos = pos;

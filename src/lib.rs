@@ -18,15 +18,36 @@ pub const SCENARIOS: &[(&str, &str)] = &[
     ("trojans", include_str!("../assets/scenarios/trojans.toml")),
     ("jupiter", include_str!("../assets/scenarios/jupiter.toml")),
     ("saturn", include_str!("../assets/scenarios/saturn.toml")),
-    ("pluto-charon", include_str!("../assets/scenarios/pluto-charon.toml")),
-    ("earth-moon", include_str!("../assets/scenarios/earth-moon.toml")),
-    ("pythagorean", include_str!("../assets/scenarios/pythagorean.toml")),
+    (
+        "pluto-charon",
+        include_str!("../assets/scenarios/pluto-charon.toml"),
+    ),
+    (
+        "earth-moon",
+        include_str!("../assets/scenarios/earth-moon.toml"),
+    ),
+    (
+        "pythagorean",
+        include_str!("../assets/scenarios/pythagorean.toml"),
+    ),
     ("flyby", include_str!("../assets/scenarios/flyby.toml")),
-    ("unstable", include_str!("../assets/scenarios/unstable.toml")),
-    ("trappist1", include_str!("../assets/scenarios/trappist1.toml")),
+    (
+        "unstable",
+        include_str!("../assets/scenarios/unstable.toml"),
+    ),
+    (
+        "trappist1",
+        include_str!("../assets/scenarios/trappist1.toml"),
+    ),
     ("kozai", include_str!("../assets/scenarios/kozai.toml")),
-    ("ptolemaic", include_str!("../assets/scenarios/ptolemaic.toml")),
-    ("retrograde", include_str!("../assets/scenarios/retrograde.toml")),
+    (
+        "ptolemaic",
+        include_str!("../assets/scenarios/ptolemaic.toml"),
+    ),
+    (
+        "retrograde",
+        include_str!("../assets/scenarios/retrograde.toml"),
+    ),
     // Vortex is a presentation preset over canonical Solar physics. Use
     // `scenario::load_builtin` to apply its representation overrides.
     ("vortex", SOLAR_TOML),

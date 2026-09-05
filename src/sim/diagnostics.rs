@@ -7,8 +7,8 @@ use super::body::{vec_len, Body};
 pub fn total_momentum(bodies: &[Body]) -> [f64; 3] {
     let mut p = [0.0; 3];
     for b in bodies {
-        for k in 0..3 {
-            p[k] += b.mass * b.vel[k];
+        for (component, velocity) in p.iter_mut().zip(b.vel) {
+            *component += b.mass * velocity;
         }
     }
     p

@@ -53,7 +53,12 @@ fn build(scn: Scenario) -> Result<Loaded> {
     let mut helio_index: u32 = 0;
     let mut kepler_index: u32 = 0;
     for spec in &scn.bodies {
-        let mut b = Body::new(spec.name.clone(), parse_kind(&spec.kind), spec.mass, spec.radius);
+        let mut b = Body::new(
+            spec.name.clone(),
+            parse_kind(&spec.kind),
+            spec.mass,
+            spec.radius,
+        );
         if let Some(gl) = spec.glyph {
             b.glyph = gl;
         }
@@ -98,9 +103,19 @@ fn build(scn: Scenario) -> Result<Loaded> {
             let p = bodies
                 .iter()
                 .position(|b| &b.name == parent)
-                .ok_or_else(|| anyhow!("body '{}' references unknown parent '{}'", spec.name, parent))?;
+                .ok_or_else(|| {
+                    anyhow!(
+                        "body '{}' references unknown parent '{}'",
+                        spec.name,
+                        parent
+                    )
+                })?;
             if p >= i {
-                return Err(anyhow!("parent '{}' must be defined before child '{}'", parent, spec.name));
+                return Err(anyhow!(
+                    "parent '{}' must be defined before child '{}'",
+                    parent,
+                    spec.name
+                ));
             }
             let (ppos, pvel) = (bodies[p].pos, bodies[p].vel);
             for k in 0..3 {
@@ -147,7 +162,11 @@ fn build(scn: Scenario) -> Result<Loaded> {
         fill: scn.render.fill,
         representation: scn.render.representation,
         show_labels: scn.render.show_labels,
-        trace_mode: if scn.trace.mode.is_empty() { "compact".into() } else { scn.trace.mode },
+        trace_mode: if scn.trace.mode.is_empty() {
+            "compact".into()
+        } else {
+            scn.trace.mode
+        },
         show_on_load: scn.trace.show_on_load,
         show_on_spawn: scn.trace.show_on_spawn,
         v_com,

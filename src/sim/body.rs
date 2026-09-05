@@ -18,10 +18,10 @@ pub enum Kind {
 pub struct Body {
     pub name: String,
     pub kind: Kind,
-    pub mass: f64,       // kg
-    pub radius: f64,     // m
-    pub pos: [f64; 3],   // m
-    pub vel: [f64; 3],   // m/s
+    pub mass: f64,     // kg
+    pub radius: f64,   // m
+    pub pos: [f64; 3], // m
+    pub vel: [f64; 3], // m/s
     pub glyph: char,
     /// Scenario-authored orbital relationship. This is semantic metadata, not
     /// an instantaneous strongest-force calculation.

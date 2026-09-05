@@ -48,10 +48,18 @@ fn check() -> Result<()> {
     for i in 0..world.bodies.len() {
         if let Some(a) = world.orbital_reference(i) {
             let mu = world.pair_mu(i, a);
-            let e = elements(&world.bodies[i], world.bodies[a].pos, world.bodies[a].vel, mu);
+            let e = elements(
+                &world.bodies[i],
+                world.bodies[a].pos,
+                world.bodies[a].vel,
+                mu,
+            );
             println!(
                 "  {:<9} around {:<8} e={:.3} {}",
-                world.bodies[i].name, world.bodies[a].name, e.eccentricity, e.status()
+                world.bodies[i].name,
+                world.bodies[a].name,
+                e.eccentricity,
+                e.status()
             );
         }
     }
@@ -73,7 +81,12 @@ fn record(path: &str) -> Result<()> {
     use solaris_tty::render::Camera;
 
     let args: Vec<String> = std::env::args().collect();
-    let frames = args.iter().filter_map(|a| a.parse::<usize>().ok()).next().unwrap_or(300).clamp(1, 1200);
+    let frames = args
+        .iter()
+        .filter_map(|a| a.parse::<usize>().ok())
+        .next()
+        .unwrap_or(300)
+        .clamp(1, 1200);
     let name = args
         .iter()
         .find_map(|a| a.strip_prefix("scene=").map(String::from))
@@ -96,14 +109,21 @@ fn record(path: &str) -> Result<()> {
     let mut out = format!(
         "{{\"version\":2,\"width\":{w},\"height\":{h},\"env\":{{\"TERM\":\"xterm-256color\"}}}}\n"
     );
-    out.push_str(&format!("[0.0, \"o\", \"{}\"]\n", json_escape("\u{1b}[2J\u{1b}[?25l")));
+    out.push_str(&format!(
+        "[0.0, \"o\", \"{}\"]\n",
+        json_escape("\u{1b}[2J\u{1b}[?25l")
+    ));
 
     let dt = 0.05;
     let focus = world.find_body("Earth").unwrap_or(1);
     for i in 0..frames {
         let ang = i as f32 * 0.012;
         session.camera = Camera::looking_at(
-            Vec3::new(extent * 1.5 * ang.cos(), extent * 1.0, extent * 1.5 * ang.sin()),
+            Vec3::new(
+                extent * 1.5 * ang.cos(),
+                extent * 1.0,
+                extent * 1.5 * ang.sin(),
+            ),
             Vec3::ZERO,
         );
         let _ = world.advance();
@@ -209,8 +229,17 @@ fn bench() -> Result<()> {
     }
     let secs = t.elapsed().as_secs_f64();
     println!("bench: {n} bodies, {pairs} pairs/step");
-    println!("  {steps} steps in {secs:.3}s = {:.2} M steps/s", steps as f64 / secs / 1e6);
-    println!("  {:.1} M pair-interactions/s", steps as f64 * pairs as f64 / secs / 1e6);
-    println!("  energy drift over run = {:+.6}%", world.energy_drift_pct());
+    println!(
+        "  {steps} steps in {secs:.3}s = {:.2} M steps/s",
+        steps as f64 / secs / 1e6
+    );
+    println!(
+        "  {:.1} M pair-interactions/s",
+        steps as f64 * pairs as f64 / secs / 1e6
+    );
+    println!(
+        "  energy drift over run = {:+.6}%",
+        world.energy_drift_pct()
+    );
     Ok(())
 }

@@ -114,8 +114,8 @@ impl Fill {
 // normal. Planets then trace true helices. HELIX_RATE is a purely visual scale.
 const HELIX_DIR_SIM: [f64; 3] = [0.5, 0.0, 0.866_025_403_784];
 const HELIX_RATE: f32 = 2.2e-7; // render units per second of sim time
-// Debunked "vortex": drift straight up the ecliptic normal (orbits 90° to motion)
-// plus a fake side-to-side corkscrew — the geometry the viral video shows.
+                                // Debunked "vortex": drift straight up the ecliptic normal (orbits 90° to motion)
+                                // plus a fake side-to-side corkscrew — the geometry the viral video shows.
 const VORTEX_DIR_SIM: [f64; 3] = [0.0, 0.0, 1.0];
 const CORKSCREW_AMP: f32 = 0.6; // render units of lateral weave
 const CORKSCREW_FREQ: f32 = 6.0; // weaves per unit drift
@@ -208,7 +208,7 @@ pub fn render(
     } = options;
     let now = world.time;
     let (w, h) = fb.size();
-    let (wf, phf) = (w as f32, (h as u16 * 2) as f32);
+    let (wf, phf) = (w as f32, (h * 2) as f32);
     let aspect = (w as f32 / h as f32) * 0.5; // pixels are square in this layer
     let mvp = cam.projection(aspect) * cam.view();
 
@@ -323,7 +323,15 @@ pub fn render(
                         let nz = (1.0 - r2).max(0.0).sqrt();
                         let color = if emissive {
                             // Hot core: lighten toward white near the centre.
-                            mix(base, Color::Rgb { r: 255, g: 255, b: 255 }, nz * 0.5)
+                            mix(
+                                base,
+                                Color::Rgb {
+                                    r: 255,
+                                    g: 255,
+                                    b: 255,
+                                },
+                                nz * 0.5,
+                            )
                         } else {
                             let normal = Vec3::new(nx, -ny, nz); // screen y is down
                             let s = (0.12 + 0.88 * normal.dot(light_view).max(0.0)).clamp(0.0, 1.0);
@@ -374,7 +382,13 @@ pub fn render(
                             Fill::Blocks => unreachable!(),
                         };
                         if ch != ' ' && fb.in_bounds(cxi, cyi) {
-                            fb.write_str(cxi as u16, cyi as u16, &ch.to_string(), scale(base, bright), Color::Reset);
+                            fb.write_str(
+                                cxi as u16,
+                                cyi as u16,
+                                &ch.to_string(),
+                                scale(base, bright),
+                                Color::Reset,
+                            );
                         }
                     }
                 }
@@ -386,7 +400,11 @@ pub fn render(
             let lx = (cx + rx + 1.0) as i32;
             let ly = (cy / 2.0) as i32; // pixel row → cell row
             if fb.in_bounds(lx, ly) {
-                let lc = if bi == selected { Color::White } else { dim(base) };
+                let lc = if bi == selected {
+                    Color::White
+                } else {
+                    dim(base)
+                };
                 fb.write_str(lx as u16, ly as u16, &b.name, lc, Color::Reset);
             }
         }
@@ -436,19 +454,67 @@ fn edge_px(mvp: &Mat4, center: Vec3, offset: Vec3, cx: f32, cy: f32, w: f32, ph:
 
 pub fn body_color(name: &str, kind: Kind) -> Color {
     match name {
-        "Sun" => Color::Rgb { r: 255, g: 220, b: 90 },
-        "Mercury" => Color::Rgb { r: 170, g: 160, b: 150 },
-        "Venus" => Color::Rgb { r: 220, g: 190, b: 120 },
-        "Earth" => Color::Rgb { r: 90, g: 150, b: 235 },
-        "Mars" => Color::Rgb { r: 210, g: 100, b: 60 },
-        "Jupiter" => Color::Rgb { r: 210, g: 170, b: 120 },
-        "Saturn" => Color::Rgb { r: 225, g: 200, b: 140 },
-        "Uranus" => Color::Rgb { r: 140, g: 220, b: 220 },
-        "Neptune" => Color::Rgb { r: 90, g: 120, b: 230 },
+        "Sun" => Color::Rgb {
+            r: 255,
+            g: 220,
+            b: 90,
+        },
+        "Mercury" => Color::Rgb {
+            r: 170,
+            g: 160,
+            b: 150,
+        },
+        "Venus" => Color::Rgb {
+            r: 220,
+            g: 190,
+            b: 120,
+        },
+        "Earth" => Color::Rgb {
+            r: 90,
+            g: 150,
+            b: 235,
+        },
+        "Mars" => Color::Rgb {
+            r: 210,
+            g: 100,
+            b: 60,
+        },
+        "Jupiter" => Color::Rgb {
+            r: 210,
+            g: 170,
+            b: 120,
+        },
+        "Saturn" => Color::Rgb {
+            r: 225,
+            g: 200,
+            b: 140,
+        },
+        "Uranus" => Color::Rgb {
+            r: 140,
+            g: 220,
+            b: 220,
+        },
+        "Neptune" => Color::Rgb {
+            r: 90,
+            g: 120,
+            b: 230,
+        },
         _ => match kind {
-            Kind::Star => Color::Rgb { r: 255, g: 240, b: 200 },
-            Kind::Moon => Color::Rgb { r: 180, g: 180, b: 180 },
-            _ => Color::Rgb { r: 160, g: 200, b: 160 },
+            Kind::Star => Color::Rgb {
+                r: 255,
+                g: 240,
+                b: 200,
+            },
+            Kind::Moon => Color::Rgb {
+                r: 180,
+                g: 180,
+                b: 180,
+            },
+            _ => Color::Rgb {
+                r: 160,
+                g: 200,
+                b: 160,
+            },
         },
     }
 }
@@ -466,7 +532,18 @@ fn scale(c: Color, f: f32) -> Color {
 
 fn mix(a: Color, b: Color, t: f32) -> Color {
     match (a, b) {
-        (Color::Rgb { r: r1, g: g1, b: b1 }, Color::Rgb { r: r2, g: g2, b: b2 }) => Color::Rgb {
+        (
+            Color::Rgb {
+                r: r1,
+                g: g1,
+                b: b1,
+            },
+            Color::Rgb {
+                r: r2,
+                g: g2,
+                b: b2,
+            },
+        ) => Color::Rgb {
             r: (r1 as f32 * (1.0 - t) + r2 as f32 * t) as u8,
             g: (g1 as f32 * (1.0 - t) + g2 as f32 * t) as u8,
             b: (b1 as f32 * (1.0 - t) + b2 as f32 * t) as u8,

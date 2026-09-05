@@ -8,8 +8,15 @@ fn frame_mode_emits_only_the_rendered_grid() {
         .expect("run frame mode");
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert_eq!(stdout.lines().count(), 40, "frame height is the output contract");
+    assert_eq!(
+        stdout.lines().count(),
+        40,
+        "frame height is the output contract"
+    );
     for contaminant in ["details card", "collision trace", ":spawn", ":set"] {
-        assert!(!stdout.contains(contaminant), "unexpected prose: {contaminant}");
+        assert!(
+            !stdout.contains(contaminant),
+            "unexpected prose: {contaminant}"
+        );
     }
 }

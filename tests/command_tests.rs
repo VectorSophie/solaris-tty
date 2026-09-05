@@ -12,14 +12,26 @@ fn world() -> solaris_tty::sim::World {
 fn spawn_parses_units_and_adds_body() {
     let mut w = world();
     let n0 = w.bodies.len();
-    let out = execute(&mut w, 0, "spawn name=Theia mass=6.4e23 pos=1au,0,0 vel=0,29.78km/s,0")
-        .expect("spawn ok");
+    let out = execute(
+        &mut w,
+        0,
+        "spawn name=Theia mass=6.4e23 pos=1au,0,0 vel=0,29.78km/s,0",
+    )
+    .expect("spawn ok");
     assert_eq!(w.bodies.len(), n0 + 1);
     let i = out.select.expect("selected new body");
     assert_eq!(w.bodies[i].name, "Theia");
     // 1au → metres, 29.78 km/s → m/s.
-    assert!((w.bodies[i].pos[0] - AU).abs() < 1.0, "pos {:?}", w.bodies[i].pos);
-    assert!((w.bodies[i].vel[1] - 29_780.0).abs() < 1.0, "vel {:?}", w.bodies[i].vel);
+    assert!(
+        (w.bodies[i].pos[0] - AU).abs() < 1.0,
+        "pos {:?}",
+        w.bodies[i].pos
+    );
+    assert!(
+        (w.bodies[i].vel[1] - 29_780.0).abs() < 1.0,
+        "vel {:?}",
+        w.bodies[i].vel
+    );
     assert!(out.panel.map(|p| !p.is_empty()).unwrap_or(false));
 }
 
@@ -75,8 +87,14 @@ fn set_without_name_edits_selection() {
 fn vortex_and_helix_traces_are_labeled() {
     let v = solaris_tty::trace::vortex_lines();
     let h = solaris_tty::trace::helix_lines();
-    assert!(v.iter().any(|l| l.contains("DEBUNKED")), "vortex trace must be labeled DEBUNKED");
-    assert!(h.iter().any(|l| l.contains("REAL")), "helix trace must be labeled REAL");
+    assert!(
+        v.iter().any(|l| l.contains("DEBUNKED")),
+        "vortex trace must be labeled DEBUNKED"
+    );
+    assert!(
+        h.iter().any(|l| l.contains("REAL")),
+        "helix trace must be labeled REAL"
+    );
 }
 
 #[test]
@@ -93,7 +111,9 @@ fn set_gr_toggles_relativity() {
 fn relativity_output_names_restricted_model_and_energy_proxy() {
     let w = world();
     let mercury = w.find_body("Mercury").unwrap();
-    let gr = solaris_tty::trace::gr_lines(&w, mercury).join("\n").to_lowercase();
+    let gr = solaris_tty::trace::gr_lines(&w, mercury)
+        .join("\n")
+        .to_lowercase();
     let debug = solaris_tty::trace::debug_lines(&w, w.substeps).join("\n");
 
     assert!(gr.contains("restricted 1pn"));

@@ -14,7 +14,12 @@ pub fn load_lines(v_com: [f64; 3], n: usize) -> Vec<String> {
         format!("Loaded {} bodies", n),
         "Barycentric correction:".into(),
         "  V_com = Σmᵢvᵢ / Σmᵢ".into(),
-        format!("  V_com = [{}, {}, {}]", sci(v_com[0]), sci(v_com[1]), sci(v_com[2])),
+        format!(
+            "  V_com = [{}, {}, {}]",
+            sci(v_com[0]),
+            sci(v_com[1]),
+            sci(v_com[2])
+        ),
         "  subtracted from all bodies".into(),
         "  → barycentre stays put".into(),
     ]
@@ -44,7 +49,13 @@ pub fn inspect_lines(world: &World, i: usize, expanded: bool) -> Vec<String> {
     out.push(format!("vs {}  (r = {} m)", att.name, sci(e.r)));
     if expanded {
         out.push("  F = G·M·m / r²".into());
-        out.push(format!("    = {}·{}·{} / ({})²", sci(world.g), sci(att.mass), sci(b.mass), sci(e.r)));
+        out.push(format!(
+            "    = {}·{}·{} / ({})²",
+            sci(world.g),
+            sci(att.mass),
+            sci(b.mass),
+            sci(e.r)
+        ));
         out.push(format!("    = {} N", sci(f)));
         out.push("  a = F/m".into());
         out.push(format!("    = {} m/s²", sci(acc)));
@@ -74,8 +85,18 @@ pub fn spawn_lines(world: &World, i: usize) -> Vec<String> {
         format!("  m = {} kg", sci(b.mass)),
         format!("  r = {} m", sci(b.radius)),
         format!("  ρ = m/(4/3πr³) = {} kg/m³", sci(b.density())),
-        format!("  x = [{}, {}, {}] m", sci(b.pos[0]), sci(b.pos[1]), sci(b.pos[2])),
-        format!("  v = [{}, {}, {}] m/s", sci(b.vel[0]), sci(b.vel[1]), sci(b.vel[2])),
+        format!(
+            "  x = [{}, {}, {}] m",
+            sci(b.pos[0]),
+            sci(b.pos[1]),
+            sci(b.pos[2])
+        ),
+        format!(
+            "  v = [{}, {}, {}] m/s",
+            sci(b.vel[0]),
+            sci(b.vel[1]),
+            sci(b.vel[2])
+        ),
     ];
 
     let Some(a) = strongest_acceleration_source(&world.bodies, i, world.g) else {
@@ -90,7 +111,12 @@ pub fn spawn_lines(world: &World, i: usize) -> Vec<String> {
     out.push(String::new());
     out.push(format!("Dominant source: {}", att.name));
     out.push("  a = G·M / d²".into());
-    out.push(format!("    = {}·{} / ({})²", sci(world.g), sci(att.mass), sci(e.r)));
+    out.push(format!(
+        "    = {}·{} / ({})²",
+        sci(world.g),
+        sci(att.mass),
+        sci(e.r)
+    ));
     out.push(format!("    = {} m/s²", sci(acc)));
     out.push("  v_c   = √(GM/d)".into());
     out.push(format!("        = {} m/s", sci(e.v_circular)));
@@ -122,7 +148,11 @@ pub fn details_lines(world: &World, i: usize) -> Vec<String> {
 
     let earth_masses = b.mass / 5.9722e24;
     let surface_g = world.g * b.mass / (b.radius * b.radius);
-    out.push(format!("mass     {} kg  ({} M⊕)", sci(b.mass), fmt(earth_masses)));
+    out.push(format!(
+        "mass     {} kg  ({} M⊕)",
+        sci(b.mass),
+        fmt(earth_masses)
+    ));
     out.push(format!("radius   {} km", fmt(b.radius / 1e3)));
     out.push(format!("density  {} kg/m³", fmt(b.density())));
     out.push(format!("surf. g  {} m/s²", fmt(surface_g)));
@@ -142,12 +172,24 @@ pub fn details_lines(world: &World, i: usize) -> Vec<String> {
         let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         out.push(format!("orbits {}:", att.name));
         if e.semi_major_axis.is_finite() && e.semi_major_axis > 0.0 {
-            out.push(format!("  a = {} km ({} AU)", sci(e.semi_major_axis / 1e3), fmt(e.semi_major_axis / AU)));
+            out.push(format!(
+                "  a = {} km ({} AU)",
+                sci(e.semi_major_axis / 1e3),
+                fmt(e.semi_major_axis / AU)
+            ));
             let q = e.semi_major_axis * (1.0 - e.eccentricity);
             let ap = e.semi_major_axis * (1.0 + e.eccentricity);
-            out.push(format!("  peri/apo = {} / {} km", sci(q / 1e3), sci(ap / 1e3)));
+            out.push(format!(
+                "  peri/apo = {} / {} km",
+                sci(q / 1e3),
+                sci(ap / 1e3)
+            ));
         }
-        out.push(format!("  e = {:.4}   i = {:.2}°", e.eccentricity, e.inclination.to_degrees()));
+        out.push(format!(
+            "  e = {:.4}   i = {:.2}°",
+            e.eccentricity,
+            e.inclination.to_degrees()
+        ));
         out.push(format!("  |v| = {} km/s", fmt(e.speed / 1e3)));
         if let Some(p) = e.period() {
             let days = p / 86400.0;
@@ -165,7 +207,7 @@ pub fn details_lines(world: &World, i: usize) -> Vec<String> {
 /// Fixed-ish decimal formatter that stays readable across magnitudes.
 fn fmt(x: f64) -> String {
     let a = x.abs();
-    if a != 0.0 && (a < 0.01 || a >= 1e5) {
+    if a != 0.0 && !(0.01..1e5).contains(&a) {
         format!("{:.3e}", x)
     } else if a >= 100.0 {
         format!("{:.0}", x)
@@ -178,16 +220,26 @@ fn fmt(x: f64) -> String {
 /// physical radii. This is geometry, not a dissipative orbital-decay model.
 pub fn surface_intersection_lines(world: &World, i: usize) -> Vec<String> {
     let b = &world.bodies[i];
-    let mut out = vec![format!("⚠ Surface-intersecting osculating trajectory: {}", b.name)];
+    let mut out = vec![format!(
+        "⚠ Surface-intersecting osculating trajectory: {}",
+        b.name
+    )];
     if let Some(a) = world.orbital_reference(i) {
         let att = &world.bodies[a];
         let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         let q = e.semi_major_axis * (1.0 - e.eccentricity);
         let contact = att.radius + b.radius;
         out.push("  periapsis q = a(1 − e)".into());
-        out.push(format!("    = {} · (1 − {:.3})", sci(e.semi_major_axis), e.eccentricity));
+        out.push(format!(
+            "    = {} · (1 − {:.3})",
+            sci(e.semi_major_axis),
+            e.eccentricity
+        ));
         out.push(format!("    = {} km", sci(q / 1e3)));
-        out.push(format!("  contact radius R₁+R₂ = {} km", sci(contact / 1e3)));
+        out.push(format!(
+            "  contact radius R₁+R₂ = {} km",
+            sci(contact / 1e3)
+        ));
         out.push("  q < R₁+R₂ → current two-body osculating path intersects the surfaces".into());
         out.push(String::new());
         out.push(format!(
@@ -213,11 +265,23 @@ pub fn roche_lines(world: &World, i: usize, p: usize) -> Vec<String> {
         "  real disruption also depends on strength, spin, and structure".into(),
     ];
     if d < estimates.rigid {
-        out.push(format!("  {} at {} m: inside both idealized estimates", m.name, sci(d)));
+        out.push(format!(
+            "  {} at {} m: inside both idealized estimates",
+            m.name,
+            sci(d)
+        ));
     } else if d < estimates.fluid {
-        out.push(format!("  {} at {} m: between rigid and fluid estimates", m.name, sci(d)));
+        out.push(format!(
+            "  {} at {} m: between rigid and fluid estimates",
+            m.name,
+            sci(d)
+        ));
     } else {
-        out.push(format!("  {} at {} m: outside both idealized estimates", m.name, sci(d)));
+        out.push(format!(
+            "  {} at {} m: outside both idealized estimates",
+            m.name,
+            sci(d)
+        ));
     }
     out
 }
@@ -251,11 +315,24 @@ pub fn escape_lines(world: &World, i: usize) -> Vec<String> {
         let att = &world.bodies[a];
         let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         out.push("  ε = v²/2 − μ/r".into());
-        out.push(format!("    = ({})²/2 − {}/{}", sci(e.speed), sci(e.mu), sci(e.r)));
+        out.push(format!(
+            "    = ({})²/2 − {}/{}",
+            sci(e.speed),
+            sci(e.mu),
+            sci(e.r)
+        ));
         out.push(format!("    = {} J/kg", sci(e.specific_energy)));
-        out.push(format!("  |v| = {} km/s  (v_esc = {} km/s)", sci(e.speed / 1e3), sci(e.v_escape / 1e3)));
+        out.push(format!(
+            "  |v| = {} km/s  (v_esc = {} km/s)",
+            sci(e.speed / 1e3),
+            sci(e.v_escape / 1e3)
+        ));
         out.push(String::new());
-        out.push(format!("Status: unbound from {} — {}", att.name, e.status()));
+        out.push(format!(
+            "Status: unbound from {} — {}",
+            att.name,
+            e.status()
+        ));
     }
     out
 }
@@ -265,7 +342,11 @@ pub fn gr_lines(world: &World, i: usize) -> Vec<String> {
     use crate::sim::units::C_LIGHT;
     let mut out = vec![format!(
         "Restricted 1PN Schwarzschild correction (source: {})",
-        if world.gr_source.is_empty() { "Sun" } else { &world.gr_source }
+        if world.gr_source.is_empty() {
+            "Sun"
+        } else {
+            &world.gr_source
+        }
     )];
     let src = world.find_body(&world.gr_source).or_else(|| {
         world
@@ -287,7 +368,12 @@ pub fn gr_lines(world: &World, i: usize) -> Vec<String> {
     let att = &world.bodies[s];
     let e = elements(b, att.pos, att.vel, world.pair_mu(i, s));
     out.push("  a_GR = (GM/c²r³)[ (4GM/r − v²)r + 4(r·v)v ]".into());
-    out.push(format!("  {}: a = {} m, e = {}", b.name, sci(e.semi_major_axis), fmt(e.eccentricity)));
+    out.push(format!(
+        "  {}: a = {} m, e = {}",
+        b.name,
+        sci(e.semi_major_axis),
+        fmt(e.eccentricity)
+    ));
     match e.gr_precession_arcsec_per_century(C_LIGHT) {
         Some(arc) => out.push(format!(
             "  analytic estimate: Δϖ = 6πGM/(c²a(1−e²)) → {} ″/century",
@@ -311,9 +397,18 @@ pub fn edit_lines(world: &World, i: usize) -> Vec<String> {
         let att = &world.bodies[a];
         let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         out.push(format!("At current distance from {}:", att.name));
-        out.push(format!("  circular velocity = {} km/s", sci(e.v_circular / 1e3)));
-        out.push(format!("  escape velocity   = {} km/s", sci(e.v_escape / 1e3)));
-        out.push(format!("  specific energy ε = {} J/kg", sci(e.specific_energy)));
+        out.push(format!(
+            "  circular velocity = {} km/s",
+            sci(e.v_circular / 1e3)
+        ));
+        out.push(format!(
+            "  escape velocity   = {} km/s",
+            sci(e.v_escape / 1e3)
+        ));
+        out.push(format!(
+            "  specific energy ε = {} J/kg",
+            sci(e.specific_energy)
+        ));
         out.push(String::new());
         out.push(format!("Status: {}", e.status()));
     }

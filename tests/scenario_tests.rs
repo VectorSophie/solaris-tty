@@ -1,8 +1,8 @@
 //! Scenario-loader checks against the bundled solar.toml.
 
 use solaris_tty::sim::body::Kind;
-use solaris_tty::sim::orbit::Class;
 use solaris_tty::sim::orbit::elements;
+use solaris_tty::sim::orbit::Class;
 use solaris_tty::SOLAR_TOML;
 
 #[test]
@@ -135,7 +135,7 @@ fn all_bundled_scenarios_parse() {
 }
 
 #[test]
-fn every_planet_starts_bound() {
+fn declared_orbit_relationships_start_bound() {
     let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
     let w = &loaded.world;
     for i in 0..w.bodies.len() {
@@ -267,17 +267,24 @@ fn all_bundled_scenarios_load() {
     for (name, _) in solaris_tty::SCENARIOS {
         let loaded = solaris_tty::scenario::load_builtin(name)
             .unwrap_or_else(|e| panic!("scenario '{name}' failed to parse: {e}"));
-        assert!(loaded.world.bodies.len() >= 2, "scenario '{name}' has <2 bodies");
+        assert!(
+            loaded.world.bodies.len() >= 2,
+            "scenario '{name}' has <2 bodies"
+        );
         let energy = loaded.world.total_energy();
-        assert!(energy.is_finite(), "scenario '{name}' has non-finite energy");
+        assert!(
+            energy.is_finite(),
+            "scenario '{name}' has non-finite energy"
+        );
     }
 }
 
 #[test]
 fn jupiter_has_bound_galilean_moons() {
     use solaris_tty::sim::orbit::{elements, Class};
-    let w = &solaris_tty::scenario::from_str(
-        solaris_tty::scenario_toml("jupiter").unwrap()).unwrap().world;
+    let w = &solaris_tty::scenario::from_str(solaris_tty::scenario_toml("jupiter").unwrap())
+        .unwrap()
+        .world;
     assert_eq!(w.bodies.len(), 5);
     let io = w.find_body("Io").unwrap();
     let jup = w.orbital_reference(io).unwrap();
@@ -292,18 +299,22 @@ fn jupiter_has_bound_galilean_moons() {
 
 #[test]
 fn trappist1_has_seven_planets() {
-    let w = &solaris_tty::scenario::from_str(
-        solaris_tty::scenario_toml("trappist1").unwrap()).unwrap().world;
+    let w = &solaris_tty::scenario::from_str(solaris_tty::scenario_toml("trappist1").unwrap())
+        .unwrap()
+        .world;
     assert_eq!(w.bodies.len(), 8); // star + 7 planets
 }
 
 #[test]
 fn ptolemaic_puts_earth_at_the_center_and_heaviest() {
-    let w = &solaris_tty::scenario::from_str(
-        solaris_tty::scenario_toml("ptolemaic").unwrap()).unwrap().world;
+    let w = &solaris_tty::scenario::from_str(solaris_tty::scenario_toml("ptolemaic").unwrap())
+        .unwrap()
+        .world;
     let earth = w.find_body("Earth").unwrap();
     // Earth is the most massive body...
-    let heaviest = (0..w.bodies.len()).max_by(|&a, &b| w.bodies[a].mass.total_cmp(&w.bodies[b].mass)).unwrap();
+    let heaviest = (0..w.bodies.len())
+        .max_by(|&a, &b| w.bodies[a].mass.total_cmp(&w.bodies[b].mass))
+        .unwrap();
     assert_eq!(earth, heaviest);
     // ...and sits at the origin.
     assert_eq!(w.bodies[earth].pos, [0.0, 0.0, 0.0]);

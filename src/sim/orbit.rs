@@ -16,10 +16,10 @@ pub enum Class {
 #[derive(Debug, Clone, Copy)]
 pub struct Elements {
     pub mu: f64,
-    pub r: f64,             // separation, m
-    pub speed: f64,         // relative speed, m/s
-    pub v_circular: f64,    // √(mu/r)
-    pub v_escape: f64,      // √(2mu/r)
+    pub r: f64,               // separation, m
+    pub speed: f64,           // relative speed, m/s
+    pub v_circular: f64,      // √(mu/r)
+    pub v_escape: f64,        // √(2mu/r)
     pub specific_energy: f64, // ε = v²/2 − mu/r
     pub eccentricity: f64,
     pub semi_major_axis: f64, // −mu/(2ε); +inf-ish for ε→0, negative for hyperbolic

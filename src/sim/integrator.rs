@@ -8,8 +8,8 @@ use super::gravity::accelerations;
 use super::world::GrParams;
 
 // ponytail: the 1PN term is velocity-dependent, so velocity-Verlet is no longer
-// strictly symplectic. It's a ~1e-8 perturbation (same as REBOUND's added GR
-// force) — fine here. Upgrade to a PN integrator only if long-run drift matters.
+// strictly symplectic. The UI therefore labels Newtonian energy as a proxy when
+// this restricted correction is enabled.
 /// Newtonian accelerations plus the optional 1PN GR correction.
 pub fn forces(bodies: &[Body], g: f64, softening: f64, gr: Option<&GrParams>) -> Vec<[f64; 3]> {
     let mut acc = accelerations(bodies, g, softening);
@@ -35,8 +35,8 @@ pub fn leapfrog_step(
 ) -> Vec<[f64; 3]> {
     // Half kick + drift.
     for (b, a) in bodies.iter_mut().zip(acc) {
-        for k in 0..3 {
-            b.vel[k] += 0.5 * a[k] * dt;
+        for (k, acceleration) in a.iter().enumerate() {
+            b.vel[k] += 0.5 * acceleration * dt;
             b.pos[k] += b.vel[k] * dt;
         }
     }
@@ -46,8 +46,8 @@ pub fn leapfrog_step(
 
     // Second half kick.
     for (b, a) in bodies.iter_mut().zip(&new_acc) {
-        for k in 0..3 {
-            b.vel[k] += 0.5 * a[k] * dt;
+        for (k, acceleration) in a.iter().enumerate() {
+            b.vel[k] += 0.5 * acceleration * dt;
         }
     }
 

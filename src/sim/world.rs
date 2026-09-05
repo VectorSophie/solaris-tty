@@ -38,13 +38,13 @@ pub struct Collision {
 pub struct World {
     pub bodies: Vec<Body>,
     pub g: f64,
-    pub dt: f64,          // seconds per step
-    pub substeps: u32,    // leapfrog steps per advance()
-    pub softening: f64,   // m
+    pub dt: f64,        // seconds per step
+    pub substeps: u32,  // leapfrog steps per advance()
+    pub softening: f64, // m
     pub gr_enabled: bool,
     pub gr_source: String,       // body name; "" when unset
     pub gr_targets: Vec<String>, // empty ⇒ all bodies except the source
-    pub time: f64,        // elapsed sim seconds
+    pub time: f64,               // elapsed sim seconds
     /// Reference energy captured at construction, for drift reporting.
     pub energy_ref: f64,
     /// Cached acceleration at current positions, reused across steps.
@@ -89,9 +89,16 @@ impl World {
         let targets: Vec<usize> = if self.gr_targets.is_empty() {
             (0..self.bodies.len()).filter(|&i| i != source).collect()
         } else {
-            self.gr_targets.iter().filter_map(|n| self.find_body(n)).collect()
+            self.gr_targets
+                .iter()
+                .filter_map(|n| self.find_body(n))
+                .collect()
         };
-        Some(GrParams { source, targets, c: crate::sim::units::C_LIGHT })
+        Some(GrParams {
+            source,
+            targets,
+            c: crate::sim::units::C_LIGHT,
+        })
     }
 
     /// Remove the net drift of the system's centre of mass so the barycentre
@@ -105,11 +112,16 @@ impl World {
         let p = diagnostics::total_momentum(&self.bodies);
         let v_com = [p[0] / total_mass, p[1] / total_mass, p[2] / total_mass];
         for b in &mut self.bodies {
-            for k in 0..3 {
-                b.vel[k] -= v_com[k];
+            for (velocity, correction) in b.vel.iter_mut().zip(v_com) {
+                *velocity -= correction;
             }
         }
-        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
+        self.acc = crate::sim::integrator::forces(
+            &self.bodies,
+            self.g,
+            self.softening,
+            self.gr_params().as_ref(),
+        );
         self.energy_ref = diagnostics::total_energy(&self.bodies, self.g, self.softening);
         v_com
     }
@@ -122,7 +134,12 @@ impl World {
             let starts: Vec<[f64; 3]> = self.bodies.iter().map(|body| body.pos).collect();
             let gr = self.gr_params();
             self.acc = leapfrog_step(
-                &mut self.bodies, &self.acc, self.dt, self.g, self.softening, gr.as_ref(),
+                &mut self.bodies,
+                &self.acc,
+                self.dt,
+                self.g,
+                self.softening,
+                gr.as_ref(),
             );
             self.time += self.dt;
             if let Some((i, j)) = self.swept_collision_pair(&starts) {
@@ -177,7 +194,12 @@ impl World {
         self.time = snap.time;
         self.energy_ref = snap.energy_ref;
         self.bodies = snap.bodies.iter().map(Body::without_trail).collect();
-        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
+        self.acc = crate::sim::integrator::forces(
+            &self.bodies,
+            self.g,
+            self.softening,
+            self.gr_params().as_ref(),
+        );
     }
 
     /// Find the first pair whose swept relative segment crosses the sum of its
@@ -239,7 +261,12 @@ impl World {
         self.bodies.remove(drop);
 
         // Recompute cached acceleration (length must track body count).
-        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
+        self.acc = crate::sim::integrator::forces(
+            &self.bodies,
+            self.g,
+            self.softening,
+            self.gr_params().as_ref(),
+        );
         self.energy_ref = self.total_energy();
 
         let survivor_idx = if drop < keep { keep - 1 } else { keep };
@@ -267,7 +294,12 @@ impl World {
     /// Recompute cached acceleration and re-baseline reference energy after an
     /// in-place edit to a body's mass/position (e.g. via `:set`).
     pub fn refresh_forces(&mut self) {
-        self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
+        self.acc = crate::sim::integrator::forces(
+            &self.bodies,
+            self.g,
+            self.softening,
+            self.gr_params().as_ref(),
+        );
         self.energy_ref = self.total_energy();
     }
 }
