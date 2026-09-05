@@ -3,7 +3,6 @@
 use solaris_tty::sim::body::Kind;
 use solaris_tty::sim::orbit::Class;
 use solaris_tty::sim::orbit::elements;
-use solaris_tty::sim::gravity::dominant_attractor;
 use solaris_tty::SOLAR_TOML;
 
 #[test]
@@ -65,6 +64,61 @@ fn moons_are_offset_from_their_parent() {
 }
 
 #[test]
+fn declared_parent_survives_loading_and_drives_orbital_reference() {
+    use solaris_tty::sim::gravity::strongest_acceleration_source;
+    let loaded = solaris_tty::scenario::from_str(SOLAR_TOML).unwrap();
+    let w = &loaded.world;
+    let sun = w.find_body("Sun").unwrap();
+    let earth = w.find_body("Earth").unwrap();
+    let moon = w.find_body("Moon").unwrap();
+
+    assert_eq!(w.bodies[earth].parent.as_deref(), Some("Sun"));
+    assert_eq!(w.bodies[moon].parent.as_deref(), Some("Earth"));
+    assert_eq!(w.orbital_reference(moon), Some(earth));
+    assert_eq!(w.orbital_reference(sun), None);
+    assert_eq!(
+        strongest_acceleration_source(&w.bodies, moon, w.g),
+        Some(sun),
+        "strongest force source is a separate concept from orbital parent"
+    );
+}
+
+#[test]
+fn parent_relative_kepler_state_uses_both_body_masses() {
+    use solaris_tty::sim::body::{vec_len, vec_sub};
+    use solaris_tty::sim::units::G;
+
+    let src = r#"
+name = "equal pair"
+[simulation]
+gravitational_constant = 6.67430e-11
+[render]
+[[bodies]]
+name = "Primary"
+kind = "planet"
+mass = 1.0e20
+radius = 1.0e5
+position = [0.0, 0.0, 0.0]
+velocity = [0.0, 0.0, 0.0]
+[[bodies]]
+name = "Secondary"
+kind = "moon"
+parent = "Primary"
+mass = 1.0e20
+radius = 1.0e5
+distance = 1.0e7
+eccentricity = 0.0
+mean_anomaly = 0.0
+"#;
+    let w = &solaris_tty::scenario::from_str(src).unwrap().world;
+    let primary = w.find_body("Primary").unwrap();
+    let secondary = w.find_body("Secondary").unwrap();
+    let relative_velocity = vec_len(vec_sub(w.bodies[secondary].vel, w.bodies[primary].vel));
+    let expected = (G * 2.0e20 / 1.0e7).sqrt();
+    assert!((relative_velocity - expected).abs() / expected < 1e-12);
+}
+
+#[test]
 fn all_bundled_scenarios_parse() {
     use solaris_tty::sim::body::vec_len;
     use solaris_tty::sim::diagnostics::total_momentum;
@@ -87,8 +141,8 @@ fn every_planet_starts_bound() {
         if w.bodies[i].kind == Kind::Star {
             continue; // a star orbits nothing
         }
-        if let Some(a) = dominant_attractor(&w.bodies, i, w.g) {
-            let mu = w.g * w.bodies[a].mass;
+        if let Some(a) = w.orbital_reference(i) {
+            let mu = w.pair_mu(i, a);
             let e = elements(&w.bodies[i], w.bodies[a].pos, w.bodies[a].vel, mu);
             assert_eq!(
                 e.class,
@@ -200,14 +254,18 @@ fn all_bundled_scenarios_load() {
 
 #[test]
 fn jupiter_has_bound_galilean_moons() {
-    use solaris_tty::sim::gravity::dominant_attractor;
     use solaris_tty::sim::orbit::{elements, Class};
     let w = &solaris_tty::scenario::from_str(
         solaris_tty::scenario_toml("jupiter").unwrap()).unwrap().world;
     assert_eq!(w.bodies.len(), 5);
     let io = w.find_body("Io").unwrap();
-    let jup = dominant_attractor(&w.bodies, io, w.g).unwrap();
-    let e = elements(&w.bodies[io], w.bodies[jup].pos, w.bodies[jup].vel, w.g * w.bodies[jup].mass);
+    let jup = w.orbital_reference(io).unwrap();
+    let e = elements(
+        &w.bodies[io],
+        w.bodies[jup].pos,
+        w.bodies[jup].vel,
+        w.pair_mu(io, jup),
+    );
     assert_eq!(e.class, Class::Bound, "Io should be bound to Jupiter");
 }
 

@@ -30,6 +30,7 @@ about = "Ringed gas giant; least dense planet (floats in water)"
 [[bodies]]
 name = "Enceladus"
 kind = "moon"
+parent = "Saturn"
 mass = 1.08e20
 radius = 2.521e5
 distance = 2.380e8
@@ -39,6 +40,7 @@ about = "Icy moon venting geysers from a subsurface ocean"
 [[bodies]]
 name = "Rhea"
 kind = "moon"
+parent = "Saturn"
 mass = 2.306e21
 radius = 7.634e5
 distance = 5.271e8
@@ -47,6 +49,7 @@ orbital_velocity = 8484.0
 [[bodies]]
 name = "Titan"
 kind = "moon"
+parent = "Saturn"
 mass = 1.345e23
 radius = 2.5747e6
 distance = 1.2219e9
@@ -56,6 +59,7 @@ about = "Thick atmosphere, methane lakes; larger than Mercury"
 [[bodies]]
 name = "Iapetus"
 kind = "moon"
+parent = "Saturn"
 mass = 1.806e21
 radius = 7.346e5
 distance = 3.5613e9

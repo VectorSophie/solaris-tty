@@ -27,6 +27,7 @@ glyph = "e"
 [[bodies]]
 name = "Moon"
 kind = "moon"
+parent = "Earth"
 mass = 7.342e22
 radius = 1.737e6
 position = [3.7973e8, 0.0, 0.0]

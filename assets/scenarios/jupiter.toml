@@ -28,6 +28,7 @@ about = "Gas giant; 318 Earth masses, the Solar System's largest planet"
 [[bodies]]
 name = "Io"
 kind = "moon"
+parent = "Jupiter"
 mass = 8.932e22
 radius = 1.8216e6
 distance = 4.217e8
@@ -37,6 +38,7 @@ about = "Most volcanically active body in the Solar System"
 [[bodies]]
 name = "Europa"
 kind = "moon"
+parent = "Jupiter"
 mass = 4.800e22
 radius = 1.5608e6
 distance = 6.711e8
@@ -46,6 +48,7 @@ about = "Ice shell over a subsurface ocean"
 [[bodies]]
 name = "Ganymede"
 kind = "moon"
+parent = "Jupiter"
 mass = 1.4819e23
 radius = 2.6341e6
 distance = 1.0704e9
@@ -55,6 +58,7 @@ about = "Largest moon in the Solar System; bigger than Mercury"
 [[bodies]]
 name = "Callisto"
 kind = "moon"
+parent = "Jupiter"
 mass = 1.0759e23
 radius = 2.4103e6
 distance = 1.8827e9

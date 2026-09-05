@@ -4,7 +4,7 @@
 //! Traces are plain `Vec<String>` lines so the UI can box them. Compact vs
 //! expanded is chosen per call; debug lines come from world diagnostics.
 
-use crate::sim::gravity::dominant_attractor;
+use crate::sim::gravity::strongest_acceleration_source;
 use crate::sim::orbit::elements;
 use crate::sim::World;
 
@@ -30,12 +30,12 @@ pub fn inspect_lines(world: &World, i: usize, expanded: bool) -> Vec<String> {
         format!("  ρ = {} kg/m³", sci(b.density())),
     ];
 
-    let Some(a) = dominant_attractor(&world.bodies, i, world.g) else {
-        out.push("  (no dominant attractor)".into());
+    let Some(a) = world.orbital_reference(i) else {
+        out.push("  (no declared orbital reference)".into());
         return out;
     };
     let att = &world.bodies[a];
-    let mu = world.g * att.mass;
+    let mu = world.pair_mu(i, a);
     let e = elements(b, att.pos, att.vel, mu);
     let f = world.g * att.mass * b.mass / (e.r * e.r);
     let acc = f / b.mass;
@@ -78,12 +78,12 @@ pub fn spawn_lines(world: &World, i: usize) -> Vec<String> {
         format!("  v = [{}, {}, {}] m/s", sci(b.vel[0]), sci(b.vel[1]), sci(b.vel[2])),
     ];
 
-    let Some(a) = dominant_attractor(&world.bodies, i, world.g) else {
-        out.push("(no dominant attractor)".into());
+    let Some(a) = strongest_acceleration_source(&world.bodies, i, world.g) else {
+        out.push("(no acceleration source)".into());
         return out;
     };
     let att = &world.bodies[a];
-    let mu = world.g * att.mass;
+    let mu = world.pair_mu(i, a);
     let e = elements(b, att.pos, att.vel, mu);
     let acc = world.g * att.mass / (e.r * e.r);
 
@@ -137,9 +137,9 @@ pub fn details_lines(world: &World, i: usize) -> Vec<String> {
         out.push(format!("rings    {}–{} R", fmt(ri), fmt(ro)));
     }
 
-    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+    if let Some(a) = world.orbital_reference(i) {
         let att = &world.bodies[a];
-        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         out.push(format!("orbits {}:", att.name));
         if e.semi_major_axis.is_finite() && e.semi_major_axis > 0.0 {
             out.push(format!("  a = {} km ({} AU)", sci(e.semi_major_axis / 1e3), fmt(e.semi_major_axis / AU)));
@@ -179,9 +179,9 @@ fn fmt(x: f64) -> String {
 pub fn decay_lines(world: &World, i: usize) -> Vec<String> {
     let b = &world.bodies[i];
     let mut out = vec![format!("⚠ Orbital decay: {}", b.name)];
-    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+    if let Some(a) = world.orbital_reference(i) {
         let att = &world.bodies[a];
-        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         let q = e.semi_major_axis * (1.0 - e.eccentricity);
         out.push("  periapsis q = a(1 − e)".into());
         out.push(format!("    = {} · (1 − {:.3})", sci(e.semi_major_axis), e.eccentricity));
@@ -240,9 +240,9 @@ pub fn vortex_lines() -> Vec<String> {
 pub fn escape_lines(world: &World, i: usize) -> Vec<String> {
     let b = &world.bodies[i];
     let mut out = vec![format!("✦ Escape detected: {}", b.name)];
-    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+    if let Some(a) = world.orbital_reference(i) {
         let att = &world.bodies[a];
-        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         out.push("  ε = v²/2 − μ/r".into());
         out.push(format!("    = ({})²/2 − {}/{}", sci(e.speed), sci(e.mu), sci(e.r)));
         out.push(format!("    = {} J/kg", sci(e.specific_energy)));
@@ -278,7 +278,7 @@ pub fn gr_lines(world: &World, i: usize) -> Vec<String> {
     }
     let b = &world.bodies[i];
     let att = &world.bodies[s];
-    let e = elements(b, att.pos, att.vel, world.g * att.mass);
+    let e = elements(b, att.pos, att.vel, world.pair_mu(i, s));
     out.push("  a_GR = (GM/c²r³)[ (4GM/r − v²)r + 4(r·v)v ]".into());
     out.push(format!("  {}: a = {} m, e = {}", b.name, sci(e.semi_major_axis), fmt(e.eccentricity)));
     match e.gr_precession_arcsec_per_century(C_LIGHT) {
@@ -297,9 +297,9 @@ pub fn edit_lines(world: &World, i: usize) -> Vec<String> {
         format!("  m = {} kg   r = {} m", sci(b.mass), sci(b.radius)),
         format!("  |v| = {} km/s", sci(b.speed() / 1e3)),
     ];
-    if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+    if let Some(a) = world.orbital_reference(i) {
         let att = &world.bodies[a];
-        let e = elements(b, att.pos, att.vel, world.g * att.mass);
+        let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         out.push(format!("At current distance from {}:", att.name));
         out.push(format!("  circular velocity = {} km/s", sci(e.v_circular / 1e3)));
         out.push(format!("  escape velocity   = {} km/s", sci(e.v_escape / 1e3)));

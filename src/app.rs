@@ -316,7 +316,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
             let current_roche = roche_names(&world);
             for name in current_roche.difference(&roched) {
                 if let Some(i) = world.find_body(name) {
-                    if let Some(p) = crate::sim::gravity::dominant_attractor(&world.bodies, i, world.g) {
+                    if let Some(p) = world.orbital_reference(i) {
                         status_msg = Some(format!("Roche: {name} inside tidal limit"));
                         panel_override = Some(trace::roche_lines(&world, i, p));
                     }
@@ -463,16 +463,15 @@ fn view_panel(rep: render::scene::Representation) -> Option<Vec<String>> {
 /// dominant attractor. Stars are skipped (a star orbits nothing).
 fn unbound_names(world: &World) -> HashSet<String> {
     use crate::sim::body::Kind;
-    use crate::sim::gravity::dominant_attractor;
     use crate::sim::orbit::{elements, Class};
     let mut set = HashSet::new();
     for (i, b) in world.bodies.iter().enumerate() {
         if b.kind == Kind::Star {
             continue;
         }
-        if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+        if let Some(a) = world.orbital_reference(i) {
             let att = &world.bodies[a];
-            let e = elements(b, att.pos, att.vel, world.g * att.mass);
+            let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
             if e.class != Class::Bound {
                 set.insert(b.name.clone());
             }
@@ -499,16 +498,15 @@ fn after_restore(
 /// attractor's surface — an impact-bound (decaying) orbit.
 fn decaying_names(world: &World) -> HashSet<String> {
     use crate::sim::body::Kind;
-    use crate::sim::gravity::dominant_attractor;
     use crate::sim::orbit::{elements, Class};
     let mut set = HashSet::new();
     for (i, b) in world.bodies.iter().enumerate() {
         if b.kind == Kind::Star {
             continue;
         }
-        if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
+        if let Some(a) = world.orbital_reference(i) {
             let att = &world.bodies[a];
-            let e = elements(b, att.pos, att.vel, world.g * att.mass);
+            let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
             if e.class == Class::Bound && e.semi_major_axis > 0.0 {
                 let q = e.semi_major_axis * (1.0 - e.eccentricity);
                 if q < att.radius + b.radius {
@@ -523,10 +521,9 @@ fn decaying_names(world: &World) -> HashSet<String> {
 /// Names of bodies currently within their dominant attractor's rigid Roche limit.
 fn roche_names(world: &World) -> HashSet<String> {
     use crate::sim::body::{vec_len, vec_sub};
-    use crate::sim::gravity::dominant_attractor;
     let mut set = HashSet::new();
     for i in 0..world.bodies.len() {
-        if let Some(p) = dominant_attractor(&world.bodies, i, world.g) {
+        if let Some(p) = world.orbital_reference(i) {
             let m = &world.bodies[i];
             let pri = &world.bodies[p];
             if m.density() <= 0.0 || pri.density() <= 0.0 {

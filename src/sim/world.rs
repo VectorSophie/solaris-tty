@@ -145,6 +145,17 @@ impl World {
         self.bodies.iter().position(|b| b.name == name)
     }
 
+    /// Resolve the scenario-authored orbital reference for `target`.
+    pub fn orbital_reference(&self, target: usize) -> Option<usize> {
+        let parent = self.bodies.get(target)?.parent.as_deref()?;
+        self.find_body(parent)
+    }
+
+    /// Standard gravitational parameter for relative two-body motion.
+    pub fn pair_mu(&self, target: usize, reference: usize) -> f64 {
+        self.g * (self.bodies[target].mass + self.bodies[reference].mass)
+    }
+
     /// Capture the current physical state (trails excluded) for rewind.
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {

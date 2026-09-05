@@ -72,6 +72,13 @@ fn vis_viva_holds_for_circular_orbit() {
 }
 
 #[test]
+fn pair_mu_includes_both_body_masses() {
+    let world = sun_and_body(1.0, 1.0);
+    let expected = world.g * (world.bodies[0].mass + world.bodies[1].mass);
+    assert_eq!(world.pair_mu(1, 0), expected);
+}
+
+#[test]
 fn kepler_circular_orbit_matches_vis_viva() {
     use solaris_tty::sim::body::vec_len;
     use solaris_tty::sim::kepler::state_from_elements;

@@ -5,7 +5,6 @@
 //!   solaris-tty --bench       headless benchmark
 
 use anyhow::Result;
-use solaris_tty::sim::gravity::dominant_attractor;
 use solaris_tty::sim::orbit::elements;
 use solaris_tty::SOLAR_TOML;
 
@@ -51,8 +50,8 @@ fn check() -> Result<()> {
         loaded.v_com[0], loaded.v_com[1], loaded.v_com[2]
     );
     for i in 0..world.bodies.len() {
-        if let Some(a) = dominant_attractor(&world.bodies, i, world.g) {
-            let mu = world.g * world.bodies[a].mass;
+        if let Some(a) = world.orbital_reference(i) {
+            let mu = world.pair_mu(i, a);
             let e = elements(&world.bodies[i], world.bodies[a].pos, world.bodies[a].vel, mu);
             println!(
                 "  {:<9} around {:<8} e={:.3} {}",

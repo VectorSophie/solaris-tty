@@ -56,6 +56,7 @@ fn build(scn: Scenario) -> Result<Loaded> {
         if let Some(gl) = spec.glyph {
             b.glyph = gl;
         }
+        b.parent = spec.parent.clone();
         b.axial_tilt = spec.axial_tilt;
         b.rotation_hours = spec.rotation_hours;
         b.ring_inner = spec.ring_inner;
@@ -68,7 +69,7 @@ fn build(scn: Scenario) -> Result<Loaded> {
                 Some(p) => mass_of(p).ok_or_else(|| anyhow!("unknown parent '{p}'"))?,
                 None => sun_mass,
             };
-            let s = kepler_state(spec, g * central, kepler_index);
+            let s = kepler_state(spec, g * (central + spec.mass), kepler_index);
             kepler_index += 1;
             s
         } else {

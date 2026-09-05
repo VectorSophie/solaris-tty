@@ -23,6 +23,9 @@ pub struct Body {
     pub pos: [f64; 3],   // m
     pub vel: [f64; 3],   // m/s
     pub glyph: char,
+    /// Scenario-authored orbital relationship. This is semantic metadata, not
+    /// an instantaneous strongest-force calculation.
+    pub parent: Option<String>,
     /// Past (position, sim-time) samples for the render trail (newest at back).
     /// The timestamp lets the helical representation offset older points.
     pub trail: VecDeque<([f64; 3], f64)>,
@@ -44,6 +47,7 @@ impl Body {
             pos: [0.0; 3],
             vel: [0.0; 3],
             glyph: '●',
+            parent: None,
             trail: VecDeque::new(),
             axial_tilt: None,
             rotation_hours: None,
@@ -64,6 +68,7 @@ impl Body {
             pos: self.pos,
             vel: self.vel,
             glyph: self.glyph,
+            parent: self.parent.clone(),
             trail: VecDeque::new(),
             axial_tilt: self.axial_tilt,
             rotation_hours: self.rotation_hours,

@@ -83,9 +83,14 @@ pub fn add_gr_accelerations(
     }
 }
 
-/// Index of the body exerting the strongest gravitational pull on `target`
-/// (its "dominant attractor"), or None if it's the only body.
-pub fn dominant_attractor(bodies: &[Body], target: usize, g: f64) -> Option<usize> {
+/// Index of the body producing the strongest instantaneous acceleration on
+/// `target`, or None if it is the only body. This is not an orbital-parent
+/// inference: hierarchical systems can orbit a weaker nearby source.
+pub fn strongest_acceleration_source(
+    bodies: &[Body],
+    target: usize,
+    g: f64,
+) -> Option<usize> {
     let mut best = None;
     let mut best_a = 0.0;
     for j in 0..bodies.len() {
