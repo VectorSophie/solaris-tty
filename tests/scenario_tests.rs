@@ -122,8 +122,8 @@ mean_anomaly = 0.0
 fn all_bundled_scenarios_parse() {
     use solaris_tty::sim::body::vec_len;
     use solaris_tty::sim::diagnostics::total_momentum;
-    for (name, toml) in solaris_tty::SCENARIOS {
-        let loaded = solaris_tty::scenario::from_str(toml)
+    for (name, _) in solaris_tty::SCENARIOS {
+        let loaded = solaris_tty::scenario::load_builtin(name)
             .unwrap_or_else(|e| panic!("scenario '{name}' failed to parse: {e}"));
         assert!(!loaded.world.bodies.is_empty(), "{name} has no bodies");
         // Barycentric correction should leave ~zero net momentum.
@@ -235,16 +235,36 @@ orbital_velocity = 0.0
 
 #[test]
 fn vortex_scenario_opens_in_helical() {
-    let loaded = solaris_tty::scenario::from_str(
-        solaris_tty::scenario_toml("vortex").unwrap()).unwrap();
+    let loaded = solaris_tty::scenario::load_builtin("vortex").unwrap();
     assert_eq!(loaded.representation, "helical");
     assert!(loaded.world.bodies.len() >= 4);
 }
 
 #[test]
+fn vortex_reuses_canonical_solar_physics() {
+    let solar = solaris_tty::scenario::load_builtin("solar").unwrap();
+    let vortex = solaris_tty::scenario::load_builtin("vortex").unwrap();
+
+    let signature = |loaded: &solaris_tty::scenario::Loaded| {
+        loaded
+            .world
+            .bodies
+            .iter()
+            .map(|body| (body.name.clone(), body.mass, body.parent.clone()))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(signature(&vortex), signature(&solar));
+    assert_eq!(vortex.world.gr_enabled, solar.world.gr_enabled);
+    assert_eq!(vortex.world.gr_source, solar.world.gr_source);
+    assert_eq!(vortex.world.gr_targets, solar.world.gr_targets);
+    assert_eq!(vortex.representation, "helical");
+    assert_eq!(solar.representation, "heliocentric");
+}
+
+#[test]
 fn all_bundled_scenarios_load() {
-    for (name, toml) in solaris_tty::SCENARIOS {
-        let loaded = solaris_tty::scenario::from_str(toml)
+    for (name, _) in solaris_tty::SCENARIOS {
+        let loaded = solaris_tty::scenario::load_builtin(name)
             .unwrap_or_else(|e| panic!("scenario '{name}' failed to parse: {e}"));
         assert!(loaded.world.bodies.len() >= 2, "scenario '{name}' has <2 bodies");
         let energy = loaded.world.total_energy();

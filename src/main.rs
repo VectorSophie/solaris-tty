@@ -32,11 +32,7 @@ fn main() -> Result<()> {
     } else {
         "solar"
     };
-    let toml = solaris_tty::scenario_toml(name).ok_or_else(|| {
-        let names: Vec<&str> = solaris_tty::SCENARIOS.iter().map(|(n, _)| *n).collect();
-        anyhow::anyhow!("unknown scenario '{name}'. available: {}", names.join(", "))
-    })?;
-    let loaded = solaris_tty::scenario::from_str(toml)?;
+    let loaded = solaris_tty::scenario::load_builtin(name)?;
     let screensaver = flags.contains(&"--screensaver");
     solaris_tty::app::run(loaded, screensaver)
 }
@@ -82,10 +78,9 @@ fn record(path: &str) -> Result<()> {
         .iter()
         .find_map(|a| a.strip_prefix("scene=").map(String::from))
         .unwrap_or_else(|| "solar".into());
-    let toml = solaris_tty::scenario_toml(&name).unwrap_or(SOLAR_TOML);
 
     let (w, h) = (100u16, 38u16);
-    let loaded = solaris_tty::scenario::from_str(toml)?;
+    let loaded = solaris_tty::scenario::load_builtin(&name)?;
     let mut world = loaded.world;
     let mode = ScaleMode::from_name(&loaded.scale).unwrap_or(ScaleMode::Compressed);
     let extent = world
@@ -157,10 +152,10 @@ fn frame() -> Result<()> {
     let mode = std::env::args()
         .find_map(|a| ScaleMode::from_name(&a))
         .unwrap_or(ScaleMode::Compressed);
-    let scene = std::env::args()
-        .find_map(|a| a.strip_prefix("scene=").and_then(solaris_tty::scenario_toml))
-        .unwrap_or(SOLAR_TOML);
-    let loaded = solaris_tty::scenario::from_str(scene)?;
+    let scene_name = std::env::args()
+        .find_map(|a| a.strip_prefix("scene=").map(String::from))
+        .unwrap_or_else(|| "solar".into());
+    let loaded = solaris_tty::scenario::load_builtin(&scene_name)?;
     let mut world = loaded.world;
     // Build up some trail history.
     for _ in 0..220 {

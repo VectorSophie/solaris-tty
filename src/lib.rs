@@ -27,7 +27,9 @@ pub const SCENARIOS: &[(&str, &str)] = &[
     ("kozai", include_str!("../assets/scenarios/kozai.toml")),
     ("ptolemaic", include_str!("../assets/scenarios/ptolemaic.toml")),
     ("retrograde", include_str!("../assets/scenarios/retrograde.toml")),
-    ("vortex", include_str!("../assets/scenarios/vortex.toml")),
+    // Vortex is a presentation preset over canonical Solar physics. Use
+    // `scenario::load_builtin` to apply its representation overrides.
+    ("vortex", SOLAR_TOML),
 ];
 
 /// Look up a bundled scenario's TOML by name.
