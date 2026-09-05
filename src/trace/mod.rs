@@ -174,43 +174,50 @@ fn fmt(x: f64) -> String {
     }
 }
 
-/// Decay trace: fired when a bound orbit's periapsis drops below the
-/// attractor's surface — the body is on an impact trajectory.
-pub fn decay_lines(world: &World, i: usize) -> Vec<String> {
+/// Explain an osculating orbit whose periapsis intersects the bodies' combined
+/// physical radii. This is geometry, not a dissipative orbital-decay model.
+pub fn surface_intersection_lines(world: &World, i: usize) -> Vec<String> {
     let b = &world.bodies[i];
-    let mut out = vec![format!("⚠ Orbital decay: {}", b.name)];
+    let mut out = vec![format!("⚠ Surface-intersecting osculating trajectory: {}", b.name)];
     if let Some(a) = world.orbital_reference(i) {
         let att = &world.bodies[a];
         let e = elements(b, att.pos, att.vel, world.pair_mu(i, a));
         let q = e.semi_major_axis * (1.0 - e.eccentricity);
+        let contact = att.radius + b.radius;
         out.push("  periapsis q = a(1 − e)".into());
         out.push(format!("    = {} · (1 − {:.3})", sci(e.semi_major_axis), e.eccentricity));
         out.push(format!("    = {} km", sci(q / 1e3)));
-        out.push(format!("  {} radius = {} km", att.name, sci(att.radius / 1e3)));
-        out.push(format!("  q < R_{} → impact-bound", att.name));
+        out.push(format!("  contact radius R₁+R₂ = {} km", sci(contact / 1e3)));
+        out.push("  q < R₁+R₂ → current two-body osculating path intersects the surfaces".into());
         out.push(String::new());
-        out.push(format!("Status: decaying orbit — will strike {}", att.name));
+        out.push(format!(
+            "Status: surface-intersecting estimate relative to {}; perturbations can change it",
+            att.name
+        ));
     }
     out
 }
 
-/// Roche-limit trace for body `i` against primary `p` (rigid-body limit).
+/// Roche-limit trace for body `i` against primary `p`.
 pub fn roche_lines(world: &World, i: usize, p: usize) -> Vec<String> {
     let m = &world.bodies[i];
     let pri = &world.bodies[p];
     let d = crate::sim::body::vec_len(crate::sim::body::vec_sub(m.pos, pri.pos));
-    // d_roche = 2.44 R_pri (ρ_pri / ρ_sat)^(1/3)
-    let ratio = (pri.density() / m.density()).cbrt();
-    let d_roche = 2.44 * pri.radius * ratio;
+    let Some(estimates) = crate::sim::tides::roche_estimates(pri, m) else {
+        return vec!["Roche estimates unavailable — invalid body density".into()];
+    };
     let mut out = vec![
-        "Roche limit — tidal disruption threshold".into(),
-        "  d_roche = 2.44 R (ρ_M/ρ_m)^⅓".into(),
-        format!("  = 2.44 · {} · ({}/{})^⅓ = {} m", sci(pri.radius), sci(pri.density()), sci(m.density()), sci(d_roche)),
+        "Idealized Roche-limit estimates".into(),
+        format!("  rigid sphere (1.26): {} m", sci(estimates.rigid)),
+        format!("  fluid synchronous (2.44): {} m", sci(estimates.fluid)),
+        "  real disruption also depends on strength, spin, and structure".into(),
     ];
-    if d < d_roche {
-        out.push(format!("  {} at d = {} m  <  d_roche  → inside: would break up", m.name, sci(d)));
+    if d < estimates.rigid {
+        out.push(format!("  {} at {} m: inside both idealized estimates", m.name, sci(d)));
+    } else if d < estimates.fluid {
+        out.push(format!("  {} at {} m: between rigid and fluid estimates", m.name, sci(d)));
     } else {
-        out.push(format!("  {} at d = {} m  ≥  d_roche  → outside: safe", m.name, sci(d)));
+        out.push(format!("  {} at {} m: outside both idealized estimates", m.name, sci(d)));
     }
     out
 }

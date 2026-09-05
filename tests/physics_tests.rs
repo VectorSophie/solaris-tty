@@ -303,7 +303,7 @@ fn roche_lines_fire_inside_limit_only() {
     use solaris_tty::trace::roche_lines;
 
     let mut primary = Body::new("P", Kind::Planet, 6.0e24, 6.4e6); // ~3.7e3 kg/m³
-    let mut moon = Body::new("m", Kind::Moon, 1.0e15, 5.0e5);       // ~1.9e3 kg/m³
+    let mut moon = Body::new("m", Kind::Moon, 9.95e20, 5.0e5);      // ~1.9e3 kg/m³
     primary.pos = [0.0, 0.0, 0.0];
     moon.pos = [1.0e7, 0.0, 0.0]; // inside the limit for these densities
     let world_in = World::new(vec![primary.clone(), moon.clone()], G, 1.0, 1, 0.0);
@@ -317,4 +317,42 @@ fn roche_lines_fire_inside_limit_only() {
     let world_out = World::new(vec![primary, moon_far], G, 1.0, 1, 0.0);
     let outside = roche_lines(&world_out, 1, 0);
     assert!(outside.iter().any(|l| l.contains("outside") || l.contains("safe")));
+}
+
+#[test]
+fn roche_estimates_distinguish_rigid_and_fluid_models() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::tides::roche_estimates;
+
+    let density = 3_000.0;
+    let mass_for = |radius: f64| density * 4.0 / 3.0 * std::f64::consts::PI * radius.powi(3);
+    let primary = Body::new("P", Kind::Planet, mass_for(10.0), 10.0);
+    let satellite = Body::new("S", Kind::Moon, mass_for(1.0), 1.0);
+
+    let estimates = roche_estimates(&primary, &satellite).unwrap();
+    assert!((estimates.rigid - 12.6).abs() < 1e-12);
+    assert!((estimates.fluid - 24.4).abs() < 1e-12);
+    assert!(estimates.rigid < estimates.fluid);
+}
+
+#[test]
+fn surface_intersection_is_not_described_as_decay() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::units::G;
+    use solaris_tty::sim::World;
+
+    let primary = Body::new("Primary", Kind::Planet, 1.0e24, 1.0e7);
+    let mut satellite = Body::new("Satellite", Kind::Moon, 1.0e20, 1.0e6);
+    satellite.parent = Some("Primary".into());
+    satellite.pos = [1.05e7, 0.0, 0.0];
+    satellite.vel = [0.0, (G * 1.0001e24 / 1.05e7).sqrt(), 0.0];
+    let world = World::new(vec![primary, satellite], G, 1.0, 1, 0.0);
+
+    let text = solaris_tty::trace::surface_intersection_lines(&world, 1)
+        .join("\n")
+        .to_lowercase();
+    assert!(text.contains("surface-intersecting"));
+    assert!(text.contains("osculating"));
+    assert!(!text.contains("decay"));
+    assert!(!text.contains("will strike"));
 }

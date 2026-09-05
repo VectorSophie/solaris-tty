@@ -224,7 +224,7 @@ fn frame() -> Result<()> {
         grazer.pos = [1.495978707e11, 0.0, 0.0];
         grazer.vel = [0.0, 2.0e3, 0.0]; // well below circular ⇒ plunging orbit
         let gi = world.add_body(grazer);
-        for l in solaris_tty::trace::decay_lines(&world, gi) {
+        for l in solaris_tty::trace::surface_intersection_lines(&world, gi) {
             println!("  {l}");
         }
     }

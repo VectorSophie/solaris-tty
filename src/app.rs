@@ -72,7 +72,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
     // Names of bodies currently on unbound trajectories, to detect new escapes.
     let mut unbound: HashSet<String> = unbound_names(&world);
     // Names of bodies whose orbit will impact their attractor (decay).
-    let mut decaying: HashSet<String> = decaying_names(&world);
+    let mut surface_intersecting: HashSet<String> = surface_intersecting_names(&world);
     // Names of bodies currently within their primary's rigid Roche limit.
     let mut roched: HashSet<String> = roche_names(&world);
     // Rewind: ring buffer of state snapshots; cursor = Some(i) while scrubbing.
@@ -191,7 +191,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                     world.restore(&history[c + 1]);
                                 }
                                 let r = after_restore(&world, selected, details);
-                                (selected, details, unbound, decaying) = r;
+                                (selected, details, unbound, surface_intersecting) = r;
                                 roched = roche_names(&world);
                             }
                             // …or take a single live step at the live edge.
@@ -212,7 +212,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                                 hist_cursor = Some(nc);
                                 world.restore(&history[nc]);
                                 let r = after_restore(&world, selected, details);
-                                (selected, details, unbound, decaying) = r;
+                                (selected, details, unbound, surface_intersecting) = r;
                                 roched = roche_names(&world);
                             }
                         }
@@ -302,15 +302,15 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
                 }
             }
             unbound = current;
-            // Decay detection: newly impact-bound orbits.
-            let current_decay = decaying_names(&world);
-            for name in current_decay.difference(&decaying) {
+            // Detect newly surface-intersecting osculating trajectories.
+            let current_intersections = surface_intersecting_names(&world);
+            for name in current_intersections.difference(&surface_intersecting) {
                 if let Some(i) = world.find_body(name) {
-                    status_msg = Some(format!("decay: {name}'s orbit will impact"));
-                    panel_override = Some(trace::decay_lines(&world, i));
+                    status_msg = Some(format!("surface-intersecting osculating path: {name}"));
+                    panel_override = Some(trace::surface_intersection_lines(&world, i));
                 }
             }
-            decaying = current_decay;
+            surface_intersecting = current_intersections;
             // Roche detection: bodies newly inside their primary's Roche limit.
             let current_roche = roche_names(&world);
             for name in current_roche.difference(&roched) {
@@ -480,7 +480,7 @@ fn unbound_names(world: &World) -> HashSet<String> {
 }
 
 /// After a rewind restore, clamp selection/details to the (possibly changed)
-/// body count and recompute the escape/decay tracking sets to avoid spurious
+/// body count and recompute escape/intersection tracking to avoid spurious
 /// re-fires.
 fn after_restore(
     world: &World,
@@ -490,12 +490,12 @@ fn after_restore(
     let n = world.bodies.len();
     let sel = selected.min(n.saturating_sub(1));
     let det = details.filter(|&d| d < n);
-    (sel, det, unbound_names(world), decaying_names(world))
+    (sel, det, unbound_names(world), surface_intersecting_names(world))
 }
 
-/// Names of bound bodies whose periapsis q = a(1−e) has dropped below their
-/// attractor's surface — an impact-bound (decaying) orbit.
-fn decaying_names(world: &World) -> HashSet<String> {
+/// Names of bound bodies whose osculating periapsis intersects the combined
+/// physical radii of the body and its declared reference.
+fn surface_intersecting_names(world: &World) -> HashSet<String> {
     use crate::sim::body::Kind;
     use crate::sim::orbit::{elements, Class};
     let mut set = HashSet::new();
@@ -529,8 +529,10 @@ fn roche_names(world: &World) -> HashSet<String> {
                 continue;
             }
             let d = vec_len(vec_sub(m.pos, pri.pos));
-            let d_roche = 2.44 * pri.radius * (pri.density() / m.density()).cbrt();
-            if d < d_roche {
+            let Some(estimates) = crate::sim::tides::roche_estimates(pri, m) else {
+                continue;
+            };
+            if d < estimates.fluid {
                 set.insert(m.name.clone());
             }
         }

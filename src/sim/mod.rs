@@ -6,6 +6,7 @@ pub mod gravity;
 pub mod integrator;
 pub mod kepler;
 pub mod orbit;
+pub mod tides;
 pub mod units;
 pub mod world;
 
