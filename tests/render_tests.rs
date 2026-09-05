@@ -16,7 +16,7 @@ fn fill_name_from_name_cycle_roundtrip() {
 }
 
 use glam::Vec3;
-use solaris_tty::render::scale::ScaleMode;
+use solaris_tty::render::scale::{sim_point_to_render, sim_vector_to_render, ScaleMode};
 use solaris_tty::render::scene::{self, Representation};
 use solaris_tty::render::{camera::Camera, FrameBuffer};
 use solaris_tty::SOLAR_TOML;
@@ -100,4 +100,23 @@ fn helical_and_vortex_render_differently() {
         fb.to_text()
     };
     assert_ne!(shot(Representation::Helical), shot(Representation::Vortex));
+}
+
+#[test]
+fn coordinate_mapping_puts_ecliptic_north_up() {
+    assert_eq!(sim_point_to_render([1.0, 2.0, 3.0]), Vec3::new(1.0, 3.0, 2.0));
+    assert_eq!(sim_vector_to_render([0.0, 0.0, 1.0]), Vec3::Y);
+}
+
+#[test]
+fn representation_axes_have_declared_ecliptic_angles() {
+    let vortex = scene::representation_axis(Representation::Vortex).unwrap();
+    assert_eq!(vortex, Vec3::Y, "vortex must follow the ecliptic normal");
+
+    let helix = scene::representation_axis(Representation::Helical).unwrap();
+    let angle_to_plane = helix.y.abs().asin().to_degrees();
+    assert!(
+        (angle_to_plane - 60.0).abs() < 0.05,
+        "helix angle to ecliptic plane = {angle_to_plane} degrees"
+    );
 }

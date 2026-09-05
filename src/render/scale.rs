@@ -58,10 +58,20 @@ const REAL_UNITS_PER_AU: f32 = 3.0; // realistic: linear
 const COMPRESS_RADIAL: f32 = 6.0; // compressed: render units per log10-decade
 const EDU_RADIAL: f32 = 8.5; // educational: more radial spread
 
+/// Convert a simulation-space point to the renderer's y-up coordinate system.
+pub fn sim_point_to_render(pos: [f64; 3]) -> Vec3 {
+    Vec3::new(pos[0] as f32, pos[2] as f32, pos[1] as f32)
+}
+
+/// Convert a simulation-space direction to the renderer's y-up coordinates.
+/// Unlike `world_to_render`, this performs no radial display scaling.
+pub fn sim_vector_to_render(vector: [f64; 3]) -> Vec3 {
+    Vec3::new(vector[0] as f32, vector[2] as f32, vector[1] as f32)
+}
+
 /// Map a world position (m) to render space under `mode`.
 pub fn world_to_render(mode: ScaleMode, pos: [f64; 3]) -> Vec3 {
-    // y-up: sim XY (ecliptic) plane → render XZ; sim +Z (north) → render +Y.
-    let p = Vec3::new(pos[0] as f32, pos[2] as f32, pos[1] as f32);
+    let p = sim_point_to_render(pos);
     let d = p.length();
     if d == 0.0 {
         return Vec3::ZERO;

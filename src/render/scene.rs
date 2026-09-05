@@ -10,7 +10,7 @@ use glam::{Mat4, Vec3, Vec4};
 
 use super::camera::Camera;
 use super::framebuffer::FrameBuffer;
-use super::scale::{render_radius, world_to_render, ScaleMode};
+use super::scale::{render_radius, sim_vector_to_render, world_to_render, ScaleMode};
 use super::starfield::Star;
 use crate::sim::body::Kind;
 use crate::sim::World;
@@ -111,24 +111,34 @@ impl Fill {
 // Correct helix: the Sun drifts ~230 km/s around the galaxy and the ecliptic is
 // tipped ~60° to that motion, so the drift direction sits 30° off the ecliptic
 // normal. Planets then trace true helices. HELIX_RATE is a purely visual scale.
-const HELIX_DIR: Vec3 = Vec3::new(0.5, 0.0, 0.866); // 30° from +Z ⇒ orbits tipped 60°
+const HELIX_DIR_SIM: [f64; 3] = [0.5, 0.0, 0.866_025_403_784];
 const HELIX_RATE: f32 = 2.2e-7; // render units per second of sim time
 // Debunked "vortex": drift straight up the ecliptic normal (orbits 90° to motion)
 // plus a fake side-to-side corkscrew — the geometry the viral video shows.
-const VORTEX_DIR: Vec3 = Vec3::new(0.0, 0.0, 1.0);
+const VORTEX_DIR_SIM: [f64; 3] = [0.0, 0.0, 1.0];
 const CORKSCREW_AMP: f32 = 0.6; // render units of lateral weave
 const CORKSCREW_FREQ: f32 = 6.0; // weaves per unit drift
+
+/// Display-space drift axis for special representations.
+pub fn representation_axis(rep: Representation) -> Option<Vec3> {
+    match rep {
+        Representation::Helical => Some(sim_vector_to_render(HELIX_DIR_SIM).normalize()),
+        Representation::Vortex => Some(sim_vector_to_render(VORTEX_DIR_SIM).normalize()),
+        _ => None,
+    }
+}
 
 /// Display-only drift of a trail point of age `t-now`, for the helical/vortex
 /// views. Zero for every other representation. Physics is unaffected.
 fn drift_offset(rep: Representation, t: f64, now: f64) -> Vec3 {
     let d = (t - now) as f32 * HELIX_RATE; // render units along the drift (negative = past)
     match rep {
-        Representation::Helical => HELIX_DIR * d,
+        Representation::Helical => representation_axis(rep).unwrap() * d,
         Representation::Vortex => {
             let phase = d * CORKSCREW_FREQ;
             // (cos-1, sin) keeps the newest point (d=0) undisplaced.
-            VORTEX_DIR * d + Vec3::new(phase.cos() - 1.0, phase.sin(), 0.0) * CORKSCREW_AMP
+            representation_axis(rep).unwrap() * d
+                + Vec3::new(phase.cos() - 1.0, 0.0, phase.sin()) * CORKSCREW_AMP
         }
         _ => Vec3::ZERO,
     }
