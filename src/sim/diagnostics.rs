@@ -15,7 +15,7 @@ pub fn total_momentum(bodies: &[Body]) -> [f64; 3] {
 }
 
 /// Total energy = kinetic + gravitational potential, joules.
-pub fn total_energy(bodies: &[Body], g: f64) -> f64 {
+pub fn total_energy(bodies: &[Body], g: f64, softening: f64) -> f64 {
     let mut ke = 0.0;
     for b in bodies {
         let v = b.speed();
@@ -29,9 +29,9 @@ pub fn total_energy(bodies: &[Body], g: f64) -> f64 {
                 bodies[j].pos[1] - bodies[i].pos[1],
                 bodies[j].pos[2] - bodies[i].pos[2],
             ];
-            let r = vec_len(d);
-            if r > 0.0 {
-                pe -= g * bodies[i].mass * bodies[j].mass / r;
+            let softened_r = (vec_len(d).powi(2) + softening.powi(2)).sqrt();
+            if softened_r > 0.0 {
+                pe -= g * bodies[i].mass * bodies[j].mass / softened_r;
             }
         }
     }

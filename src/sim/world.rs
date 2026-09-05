@@ -54,7 +54,7 @@ pub struct World {
 impl World {
     pub fn new(bodies: Vec<Body>, g: f64, dt: f64, substeps: u32, softening: f64) -> Self {
         let acc = accelerations(&bodies, g, softening);
-        let energy_ref = diagnostics::total_energy(&bodies, g);
+        let energy_ref = diagnostics::total_energy(&bodies, g, softening);
         World {
             bodies,
             g,
@@ -110,7 +110,7 @@ impl World {
             }
         }
         self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
-        self.energy_ref = diagnostics::total_energy(&self.bodies, self.g);
+        self.energy_ref = diagnostics::total_energy(&self.bodies, self.g, self.softening);
         v_com
     }
 
@@ -134,7 +134,7 @@ impl World {
     }
 
     pub fn total_energy(&self) -> f64 {
-        diagnostics::total_energy(&self.bodies, self.g)
+        diagnostics::total_energy(&self.bodies, self.g, self.softening)
     }
 
     pub fn energy_drift_pct(&self) -> f64 {

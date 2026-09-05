@@ -48,6 +48,19 @@ fn energy_is_conserved() {
 }
 
 #[test]
+fn softened_energy_uses_the_plummer_potential() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::diagnostics::total_energy;
+
+    let mut a = Body::new("A", Kind::Planet, 2.0, 1.0);
+    let mut b = Body::new("B", Kind::Planet, 3.0, 1.0);
+    a.pos = [0.0, 0.0, 0.0];
+    b.pos = [3.0, 0.0, 0.0];
+    let energy = total_energy(&[a, b], 5.0, 4.0);
+    assert_eq!(energy, -6.0, "-G*m1*m2/sqrt(3^2+4^2)");
+}
+
+#[test]
 fn barycentric_correction_zeroes_momentum() {
     let mut world = sun_and_body(1.0, 1.0);
     let before = vec_len(total_momentum(&world.bodies));
