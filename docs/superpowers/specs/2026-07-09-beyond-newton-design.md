@@ -4,6 +4,11 @@
 **Status:** Approved design, pre-implementation
 **Scope:** v0.2.0 spec #2 of 2 (spec #1 = render modes, already merged)
 
+> **2026-09-06 correction:** The implemented velocity-dependent restricted 1PN
+> force is not REBOUNDx `gr_potential`, which is non-velocity-dependent. Values
+> near 42.98″/century below are analytic formula expectations, not a measured
+> integrated result. Runtime wording now reflects those limits.
+
 > Add the physics that makes the sim *demonstrably* relativistic: a first-order
 > post-Newtonian (Schwarzschild) correction so Mercury precesses ~43″/century,
 > plus a swept collision test that stops fast bodies tunnelling through each

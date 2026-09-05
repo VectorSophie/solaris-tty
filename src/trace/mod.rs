@@ -264,7 +264,7 @@ pub fn escape_lines(world: &World, i: usize) -> Vec<String> {
 pub fn gr_lines(world: &World, i: usize) -> Vec<String> {
     use crate::sim::units::C_LIGHT;
     let mut out = vec![format!(
-        "General relativity — 1PN Schwarzschild (source: {})",
+        "Restricted 1PN Schwarzschild correction (source: {})",
         if world.gr_source.is_empty() { "Sun" } else { &world.gr_source }
     )];
     let src = world.find_body(&world.gr_source).or_else(|| {
@@ -289,7 +289,10 @@ pub fn gr_lines(world: &World, i: usize) -> Vec<String> {
     out.push("  a_GR = (GM/c²r³)[ (4GM/r − v²)r + 4(r·v)v ]".into());
     out.push(format!("  {}: a = {} m, e = {}", b.name, sci(e.semi_major_axis), fmt(e.eccentricity)));
     match e.gr_precession_arcsec_per_century(C_LIGHT) {
-        Some(arc) => out.push(format!("  Δϖ = 6πGM/(c²a(1−e²)) → {} ″/century", fmt(arc))),
+        Some(arc) => out.push(format!(
+            "  analytic estimate: Δϖ = 6πGM/(c²a(1−e²)) → {} ″/century",
+            fmt(arc)
+        )),
         None => out.push("  (unbound — no perihelion advance)".into()),
     }
     out
@@ -337,11 +340,16 @@ pub fn collision_lines(c: &crate::sim::Collision) -> Vec<String> {
 
 /// Debug diagnostics for the developer mode.
 pub fn debug_lines(world: &World, steps_per_frame: u32) -> Vec<String> {
+    let energy_label = if world.gr_enabled {
+        "Newtonian energy proxy (1PN term excluded)"
+    } else {
+        "energy drift"
+    };
     vec![
         "debug".into(),
         format!("  dt = {:.0}s  substeps = {}", world.dt, steps_per_frame),
         "  integrator = leapfrog".into(),
-        format!("  energy drift = {:+.6}%", world.energy_drift_pct()),
+        format!("  {energy_label} = {:+.6}%", world.energy_drift_pct()),
         format!("  sim time = {:.1} d", world.time / 86400.0),
     ]
 }

@@ -235,7 +235,7 @@ fn relativity_toggle_changes_trajectory_and_off_is_noop() {
 }
 
 #[test]
-fn mercury_precession_matches_gr() {
+fn analytic_mercury_precession_formula_matches_gr_value() {
     use solaris_tty::sim::orbit::{Class, Elements};
     use solaris_tty::sim::units::{C_LIGHT, G, M_SUN};
 

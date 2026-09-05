@@ -40,7 +40,7 @@ Generate your own from any scenario: `cargo run --release -- --record my.cast 30
 - [x] Orbital-decay / impact detection (auto-fires a trace)
 - [x] Rewind (scrub time), more scenarios (binary, figure-8, Trojans), asciinema recorder
 - [x] Render modes (`g`): shaded blocks · ascii brightness-ramp · name-tiled text; `l` hides chrome
-- [x] General relativity — 1PN Schwarzschild perihelion precession (Mercury ~43″/century), `:set gr`
+- [x] Restricted 1PN Schwarzschild correction with analytic precession estimate, `:set gr`
 - [x] Roche-limit detection · swept collision test (no tunnelling)
 
 See [`docs/superpowers/specs/2026-07-06-solaris-tty-design.md`](docs/superpowers/specs/2026-07-06-solaris-tty-design.md)
@@ -85,9 +85,11 @@ half-block spheres · **ascii** the same lit sphere in a `.:-=+*#%@` brightness 
 labels and the HUD for a clean screensaver frame. A scenario can preset its fill with
 `[render] fill = "ascii"`.
 
-**General relativity** (`:set gr on|off`, or `[relativity]` in a scenario): adds the
-first-order post-Newtonian correction from the Sun's field. Mercury's perihelion
-precesses the textbook ~42.98″/century; toggling GR on fires a trace with the equation
+**Restricted relativity correction** (`:set gr on|off`, or `[relativity]` in a
+scenario): adds a central-source first-order post-Newtonian correction. The trace
+shows the analytic Mercury estimate (~42.98″/century); it does not claim that the
+integrator has measured a century of secular precession. Energy shown in this mode
+is a Newtonian proxy that excludes the 1PN contribution. Toggling it fires the equation
 and the number. The default Solar System ships with it enabled (source `Sun`, targets
 the inner planets). **Roche limit:** when a body crosses its primary's rigid
 tidal-disruption limit `d = 2.44 R (ρ_M/ρ_m)^⅓`, a trace fires (detection only).

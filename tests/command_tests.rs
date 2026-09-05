@@ -88,3 +88,15 @@ fn set_gr_toggles_relativity() {
     execute(&mut w, 0, "set gr off").expect("gr off ok");
     assert!(!w.gr_enabled);
 }
+
+#[test]
+fn relativity_output_names_restricted_model_and_energy_proxy() {
+    let w = world();
+    let mercury = w.find_body("Mercury").unwrap();
+    let gr = solaris_tty::trace::gr_lines(&w, mercury).join("\n").to_lowercase();
+    let debug = solaris_tty::trace::debug_lines(&w, w.substeps).join("\n");
+
+    assert!(gr.contains("restricted 1pn"));
+    assert!(gr.contains("analytic estimate"));
+    assert!(debug.contains("Newtonian energy proxy"));
+}
