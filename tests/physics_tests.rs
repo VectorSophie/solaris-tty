@@ -142,8 +142,7 @@ fn collision_merges_and_conserves_momentum() {
     let mut w = World::new(vec![a, b], G, 300.0, 1, 1e3);
     let p_before = total_momentum(&w.bodies);
 
-    let frame_dt = w.dt * w.substeps as f64;
-    let c = w.resolve_one_collision(frame_dt).expect("should collide");
+    let c = w.advance().into_iter().next().expect("should collide");
     assert_eq!(w.bodies.len(), 1, "two bodies merge into one");
     assert!((c.merged_mass - 1.5e24).abs() < 1e18);
     // Momentum conserved through the merge.
@@ -276,11 +275,24 @@ fn swept_collision_catches_tunnelling() {
     b.vel = [-1.0e8, 0.0, 0.0]; // closes the full gap in ~1 s
     let mut w = World::new(vec![a, b], G, 1.0, 1, 0.0);
 
-    let frame_dt = w.dt * w.substeps as f64; // 1 s
-    assert!(
-        w.resolve_one_collision(frame_dt).is_some(),
-        "swept test should catch tunnelling"
-    );
+    assert_eq!(w.advance().len(), 1, "swept test should catch tunnelling");
+}
+
+#[test]
+fn advance_resolves_collision_over_the_integrated_interval() {
+    use solaris_tty::sim::body::{Body, Kind};
+    use solaris_tty::sim::World;
+
+    let a = Body::new("A", Kind::Debris, 1.0, 1.0);
+    let mut b = Body::new("B", Kind::Debris, 1.0, 1.0);
+    b.pos = [10.0, 0.0, 0.0];
+    b.vel = [-20.0, 0.0, 0.0];
+    let mut world = World::new(vec![a, b], 0.0, 1.0, 1, 0.0);
+
+    let collisions = world.advance();
+
+    assert_eq!(collisions.len(), 1);
+    assert_eq!(world.bodies.len(), 1);
 }
 
 #[test]

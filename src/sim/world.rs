@@ -114,15 +114,22 @@ impl World {
         v_com
     }
 
-    /// Advance one rendered tick: `substeps` leapfrog steps of `dt`.
-    pub fn advance(&mut self) {
-        let gr = self.gr_params();
+    /// Advance one rendered tick and resolve collisions over each integrated
+    /// substep, so fast bodies cannot tunnel through one another.
+    pub fn advance(&mut self) -> Vec<Collision> {
+        let mut collisions = Vec::new();
         for _ in 0..self.substeps {
+            let starts: Vec<[f64; 3]> = self.bodies.iter().map(|body| body.pos).collect();
+            let gr = self.gr_params();
             self.acc = leapfrog_step(
                 &mut self.bodies, &self.acc, self.dt, self.g, self.softening, gr.as_ref(),
             );
             self.time += self.dt;
+            if let Some((i, j)) = self.swept_collision_pair(&starts) {
+                collisions.push(self.merge(i, j));
+            }
         }
+        collisions
     }
 
     /// Append current positions (with sim time) to every body's trail.
@@ -173,29 +180,24 @@ impl World {
         self.acc = crate::sim::integrator::forces(&self.bodies, self.g, self.softening, self.gr_params().as_ref());
     }
 
-    /// Find the first pair whose real radii touch *at any point within the frame*
-    /// and merge it (momentum-conserving inelastic). `frame_dt` is dt·substeps —
-    /// the window over which to sweep, so fast bodies can't tunnel through.
-    /// Returns the collision record, or None. Call in a loop to resolve all.
-    ///
-    // ponytail: swept closest-approach over the whole frame (not per substep).
-    // The frame is the tunnelling window that matters and the merge conserves
-    // momentum, so exact contact time isn't needed.
-    pub fn resolve_one_collision(&mut self, frame_dt: f64) -> Option<Collision> {
+    /// Find the first pair whose swept relative segment crosses the sum of its
+    /// radii between `starts` and the current, integrated positions.
+    fn swept_collision_pair(&self, starts: &[[f64; 3]]) -> Option<(usize, usize)> {
         let n = self.bodies.len();
         for i in 0..n {
             for j in (i + 1)..n {
-                let dp = vec_sub(self.bodies[i].pos, self.bodies[j].pos);
-                let dv = vec_sub(self.bodies[i].vel, self.bodies[j].vel);
-                let vv = vec_dot(dv, dv);
-                let t_star = if vv > 0.0 {
-                    (-vec_dot(dp, dv) / vv).clamp(0.0, frame_dt)
+                let start_rel = vec_sub(starts[i], starts[j]);
+                let end_rel = vec_sub(self.bodies[i].pos, self.bodies[j].pos);
+                let delta = vec_sub(end_rel, start_rel);
+                let delta2 = vec_dot(delta, delta);
+                let fraction = if delta2 > 0.0 {
+                    (-vec_dot(start_rel, delta) / delta2).clamp(0.0, 1.0)
                 } else {
                     0.0
                 };
-                let closest = vec_len(vec_add(dp, vec_scale(dv, t_star)));
+                let closest = vec_len(vec_add(start_rel, vec_scale(delta, fraction)));
                 if closest < self.bodies[i].radius + self.bodies[j].radius {
-                    return Some(self.merge(i, j));
+                    return Some((i, j));
                 }
             }
         }
