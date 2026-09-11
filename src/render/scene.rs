@@ -227,52 +227,7 @@ fn frame_world(rep: Representation, p: [f64; 3], reference: Option<[f64; 3]>) ->
 }
 
 /// Apply surface feature rendering to suitable planets for enhanced visual quality.
-fn render_surface_features(
-    fb: &mut FrameBuffer,
-    mvp: &Mat4,
-    center: Vec3,
-    world_to_render: Vec3,
-    base_color: Color,
-    r: f32,
-    name: &str,
-    kind: Kind,
-    light_view: Vec3,
-    fill: Fill,
-    time: f64,          // Simulation time for rotation
-    is_giant: bool,     // Special handling for gas giants
-    use_rotation: bool, // Apply rotation for planet features
-) {
-    // For now, we'll implement a simplified surface features approach that doesn't require
-    // complex global orientation tracking
-    match name {
-        "Earth" => {
-            // Implement simple continent pattern - basic earth-like visual
-            let continents = [
-                [0.0, 0.0, 0.0],   // Midpoint
-                [0.3, 0.1, 0.0],   // North America
-                [0.4, -0.3, 0.0],  // Africa
-                [-0.3, -0.2, 0.0], // South America
-                [-0.5, 0.4, 0.0],  // Asia
-                [-0.1, 0.6, 0.0],  // Australia
-            ];
 
-            let tx = (center.x + world_to_render.x) / 2.0;
-            let ty = (center.y + world_to_render.y) / 2.0;
-
-            // For a more realistic approach, we would handle rotations here
-            // but we'll use a simplified visual approach for now
-
-            // This part will be enhanced with proper visual features in a proper implementation
-        }
-        "Jupiter" => {
-            // Simple band rendering for Jupiter
-            if let Fill::Blocks = fill {
-                // Skip additional band rendering for now - a more complex feature
-            }
-        }
-        _ => {}
-    }
-}
 
 /// Project a render-space point to pixel space (W × 2·H). Returns (px, py,
 /// inv_w) or None if behind the camera.

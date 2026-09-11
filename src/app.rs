@@ -392,7 +392,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
             representation,
             fill,
             chrome: show_chrome,
-            quality: RenderQuality::Standard,
+            quality: quality,
         };
         render_session.render_scene(&world, selected);
         if !screensaver && show_chrome {
