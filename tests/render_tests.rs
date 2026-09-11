@@ -19,7 +19,7 @@ fn fill_name_from_name_cycle_roundtrip() {
 
 use glam::Vec3;
 use solaris_tty::render::scale::{sim_point_to_render, sim_vector_to_render, ScaleMode};
-use solaris_tty::render::scene::{Fill, RenderQuality, Representation};
+use solaris_tty::render::scene::{RenderQuality, Representation};
 use solaris_tty::render::session::RenderOptions;
 use solaris_tty::render::{camera::Camera, FrameBuffer};
 use solaris_tty::SOLAR_TOML;

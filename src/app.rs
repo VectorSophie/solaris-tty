@@ -426,6 +426,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 fn draw_hud(
     fb: &mut FrameBuffer,
     world: &World,
@@ -492,7 +493,7 @@ fn draw_hud(
         );
     }
     let bar = if let Some(cmd) = command {
-        format!(":{cmd}\u{2588}")
+        format!(":{cmd}█")
     } else if let Some(msg) = status_msg {
         format!(" {msg}   (press ':' for a command) ")
     } else {
