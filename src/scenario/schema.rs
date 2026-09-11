@@ -83,6 +83,8 @@ pub struct Render {
     pub fill: String,
     #[serde(default = "default_representation")]
     pub representation: String,
+    #[serde(default = "default_quality")]
+    pub quality: String,
 }
 
 fn default_scale() -> String {
@@ -100,6 +102,9 @@ fn default_representation() -> String {
 fn default_show_labels() -> bool {
     true
 }
+fn default_quality() -> String {
+    "standard".into()
+}
 
 impl Default for Render {
     fn default() -> Self {
@@ -109,6 +114,7 @@ impl Default for Render {
             show_labels: true,
             fill: default_fill(),
             representation: default_representation(),
+            quality: default_quality(),
         }
     }
 }

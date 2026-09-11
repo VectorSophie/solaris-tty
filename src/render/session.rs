@@ -3,7 +3,7 @@
 use super::camera::Camera;
 use super::framebuffer::FrameBuffer;
 use super::scale::ScaleMode;
-use super::scene::{self, Fill, Representation};
+use super::scene::{self, Fill, RenderQuality, Representation};
 use super::starfield::{self, Star};
 use crate::scenario::Loaded;
 use crate::sim::World;
@@ -14,6 +14,7 @@ pub struct RenderOptions {
     pub representation: Representation,
     pub fill: Fill,
     pub chrome: bool,
+    pub quality: RenderQuality,
 }
 
 impl RenderOptions {
@@ -24,6 +25,7 @@ impl RenderOptions {
                 .unwrap_or(Representation::Heliocentric),
             fill: Fill::from_name(&loaded.fill).unwrap_or(Fill::Blocks),
             chrome: loaded.show_labels,
+            quality: RenderQuality::from_name(&loaded.quality).unwrap_or(RenderQuality::Standard),
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Render-mode (Fill / chrome) checks via the headless `to_text()` grid.
 
-use solaris_tty::render::scene::Fill;
+use solaris_tty::render::scene::{Fill, RenderQuality, Representation};
 
 #[test]
 fn fill_name_from_name_cycle_roundtrip() {
@@ -19,7 +19,7 @@ fn fill_name_from_name_cycle_roundtrip() {
 
 use glam::Vec3;
 use solaris_tty::render::scale::{sim_point_to_render, sim_vector_to_render, ScaleMode};
-use solaris_tty::render::scene::{self, Representation};
+use solaris_tty::render::scene::{Fill, RenderQuality, Representation};
 use solaris_tty::render::session::RenderOptions;
 use solaris_tty::render::{camera::Camera, FrameBuffer};
 use solaris_tty::SOLAR_TOML;
@@ -43,6 +43,7 @@ fn render_to_text(fill: Fill, show_chrome: bool) -> String {
             representation: Representation::Heliocentric,
             fill,
             chrome: show_chrome,
+            quality: RenderQuality::Standard,
         },
     );
     fb.composite_pixels();
@@ -124,6 +125,7 @@ fn helical_and_vortex_render_differently() {
                 representation: rep,
                 fill: Fill::Blocks,
                 chrome: false,
+                quality: RenderQuality::Standard,
             },
         );
         fb.composite_pixels();
@@ -219,6 +221,7 @@ fn vortex_shape_is_independent_of_trail_timestamp_spacing() {
                 representation: Representation::Vortex,
                 fill: Fill::Blocks,
                 chrome: false,
+                quality: RenderQuality::Standard,
             },
         );
         fb.composite_pixels();

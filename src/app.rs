@@ -12,7 +12,7 @@ use glam::Vec3;
 
 use crate::command;
 use crate::render::scale::ScaleMode;
-use crate::render::scene::{body_color, Representation};
+use crate::render::scene::{body_color, RenderQuality, Representation};
 use crate::render::session::{RenderOptions, RenderSession};
 use crate::render::{camera::Camera, cell::Cell, terminal, FrameBuffer};
 use crate::scenario::Loaded;
@@ -392,6 +392,7 @@ fn run_loop(loaded: Loaded, screensaver_start: bool) -> Result<()> {
             representation,
             fill,
             chrome: show_chrome,
+            quality: RenderQuality::Standard,
         };
         render_session.render_scene(&world, selected);
         if !screensaver && show_chrome {

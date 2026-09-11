@@ -13,6 +13,7 @@ pub struct Loaded {
     pub scale: String,
     pub fill: String,
     pub representation: String,
+    pub quality: String,
     pub show_labels: bool,
     pub trace_mode: String,
     pub show_on_load: bool,
@@ -161,6 +162,7 @@ fn build(scn: Scenario) -> Result<Loaded> {
         scale: scn.render.scale,
         fill: scn.render.fill,
         representation: scn.render.representation,
+        quality: scn.render.quality,
         show_labels: scn.render.show_labels,
         trace_mode: if scn.trace.mode.is_empty() {
             "compact".into()
